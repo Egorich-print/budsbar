@@ -13,13 +13,35 @@ cd "$ROOT"
 APP_NAME="BudsBar"
 BUILD_DIR="$ROOT/build"
 APP="$BUILD_DIR/$APP_NAME.app"
-SDK="${BUDSBAR_SDK:-/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk}"
 CONFIG="${CONFIG:-release}"
 
-echo "==> Building ($CONFIG)"
-swift build -c "$CONFIG" --sdk "$SDK" --product "$APP_NAME"
+# The SDK to build against.
+#
+# `BUDSBAR_SDK` wins. Otherwise a locally installed 26.5 SDK is preferred:
+# newer SDKs turn SwiftUI's `@State` into a macro whose implementation plugin
+# ships only with the full Xcode, and the Command Line Tools cannot expand it.
+# When neither is available the toolchain default is used.
+DEFAULT_SDK="/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
+if [[ -n "${BUDSBAR_SDK:-}" ]]; then
+	SDK="$BUDSBAR_SDK"
+elif [[ -d "$DEFAULT_SDK" ]]; then
+	SDK="$DEFAULT_SDK"
+else
+	SDK=""
+fi
 
-BIN="$(swift build -c "$CONFIG" --sdk "$SDK" --show-bin-path)/$APP_NAME"
+SDK_ARGS=()
+if [[ -n "$SDK" ]]; then
+	SDK_ARGS=(--sdk "$SDK")
+	echo "==> SDK: $SDK"
+else
+	echo "==> SDK: toolchain default"
+fi
+
+echo "==> Building ($CONFIG)"
+swift build -c "$CONFIG" "${SDK_ARGS[@]}" --product "$APP_NAME"
+
+BIN="$(swift build -c "$CONFIG" "${SDK_ARGS[@]}" --show-bin-path)/$APP_NAME"
 if [[ ! -x "$BIN" ]]; then
 	echo "error: binary not found at $BIN" >&2
 	exit 1

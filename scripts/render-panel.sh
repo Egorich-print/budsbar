@@ -14,14 +14,27 @@ cd "$ROOT"
 
 OUT="${1:-$ROOT/docs/images/panel-connected.png}"
 VARIANT="${2:-connected}"
-SDK="${BUDSBAR_SDK:-/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk}"
 WORK="$ROOT/build/PanelShot"
 APP="$WORK/PanelShot.app"
 
-echo "==> Building renderer"
-swift build -c release --sdk "$SDK" --product BudsPanelShot
+# See scripts/build-app.sh for why the SDK is chosen this way.
+DEFAULT_SDK="/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
+if [[ -n "${BUDSBAR_SDK:-}" ]]; then
+	SDK="$BUDSBAR_SDK"
+elif [[ -d "$DEFAULT_SDK" ]]; then
+	SDK="$DEFAULT_SDK"
+else
+	SDK=""
+fi
+SDK_ARGS=()
+if [[ -n "$SDK" ]]; then
+	SDK_ARGS=(--sdk "$SDK")
+fi
 
-BIN="$(swift build -c release --sdk "$SDK" --show-bin-path)/BudsPanelShot"
+echo "==> Building renderer"
+swift build -c release "${SDK_ARGS[@]}" --product BudsPanelShot
+
+BIN="$(swift build -c release "${SDK_ARGS[@]}" --show-bin-path)/BudsPanelShot"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp "$BIN" "$APP/Contents/MacOS/PanelShot"
