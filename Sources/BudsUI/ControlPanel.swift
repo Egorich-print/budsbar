@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import SwiftUI
+import Foundation
 import BudsCore
 
 private struct FrozenAnimationDateKey: EnvironmentKey {
@@ -27,6 +28,15 @@ public struct ControlPanel<Model: BudsViewModel>: View {
     @Environment(\.budsFrozenAnimationDate) private var frozenAnimationDate
     private let scrollable: Bool
 
+    /// Height of the control area once the earbuds are known.
+    ///
+    /// The panel is a menu-bar popover: it has to stay on screen together
+    /// with the menu bar, so the content scrolls once it grows past this.
+    private let maxScrollHeight: CGFloat = 560
+
+    /// Height of the control area while the earbuds are not known yet.
+    private let minScrollHeight: CGFloat = 90
+
     public init(controller: Model, scrollable: Bool = true) {
         self.controller = controller
         self.scrollable = scrollable
@@ -37,10 +47,7 @@ public struct ControlPanel<Model: BudsViewModel>: View {
             header
             Divider()
             if scrollable {
-                ScrollView {
-                    PanelContent(controller: controller)
-                        .padding(14)
-                }
+                scrollArea
             } else {
                 PanelContent(controller: controller)
                     .padding(14)
@@ -50,8 +57,25 @@ public struct ControlPanel<Model: BudsViewModel>: View {
         .background(.regularMaterial)
     }
 
-    // MARK: - Header
+    // MARK: - Scroll area
 
+    /// The scrollable body of the panel.
+    ///
+    /// The height is fixed rather than measured. A `ScrollView` reports an
+    /// ideal height of roughly zero, and the popover sizes itself to the
+    /// ideal — so without an explicit height the panel collapses to the
+    /// header and the whole control area is clipped away. Measuring the
+    /// content with a `GeometryReader` does not work here either: inside a
+    /// scroll view it reports zero, which collapses the area again.
+    private var scrollArea: some View {
+        ScrollView {
+            PanelContent(controller: controller)
+                .padding(14)
+        }
+        .frame(height: controller.state.isIdentified ? maxScrollHeight : minScrollHeight)
+    }
+
+    // MARK: - Header
     private var header: some View {
         HStack(spacing: 12) {
             ZStack {

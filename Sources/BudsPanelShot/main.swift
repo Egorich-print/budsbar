@@ -102,7 +102,11 @@ func makeState(_ variant: String) -> DeviceState {
 
 @MainActor
 func render(variant: String, to path: String) {
-    let controller = PreviewController(state: makeState(variant))
+    // "live" renders the panel the way the app shows it — with the scroll
+    // area — so the real layout can be reviewed, not just the content.
+    let scrollable = variant == "live"
+    let stateVariant = scrollable ? "connected" : variant
+    let controller = PreviewController(state: makeState(stateVariant))
     if variant == "connecting" {
         controller.linkState = .connecting
     }
@@ -112,7 +116,7 @@ func render(variant: String, to path: String) {
     // reads the environment in its own body.
     let frozen = Date(timeIntervalSinceReferenceDate: 1.4)
     let content = Group {
-        ControlPanel(controller: controller, scrollable: false)
+        ControlPanel(controller: controller, scrollable: scrollable)
             .frame(width: 320)
     }
     .environment(\.budsFrozenAnimationDate, variant == "connecting" ? frozen : nil)
@@ -132,6 +136,25 @@ func render(variant: String, to path: String) {
     window.appearance = NSApp.effectiveAppearance
     window.orderBack(nil)
     hosting.layoutSubtreeIfNeeded()
+
+    // "live" renders into a window of the size the popover actually gets,
+    // so the scrolling layout can be reviewed the way the app shows it.
+    if scrollable {
+        let height: CGFloat = 601
+        hosting.frame = NSRect(x: 0, y: 0, width: 320, height: height)
+        window.setContentSize(NSSize(width: 320, height: height))
+        hosting.layoutSubtreeIfNeeded()
+        RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.4))
+        hosting.layoutSubtreeIfNeeded()
+
+        guard let png = capture(hosting: hosting, size: hosting.frame.size) else {
+            FileHandle.standardError.write(Data("render failed\n".utf8))
+            exit(1)
+        }
+        try? png.write(to: URL(fileURLWithPath: path))
+        print("wrote \(path) (\(png.count) bytes, 320x\(Int(height)))")
+        return
+    }
 
     // Let the hosting view size itself to the content.
     let fitting = hosting.fittingSize

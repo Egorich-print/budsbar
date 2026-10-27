@@ -89,6 +89,29 @@ If a glanceable tile is wanted later, it should be a *status card* with a
 ≤2 s one-shot reaction animation, while all rich motion stays in the
 menu-bar panel.
 
+## Panel sizing
+
+A `MenuBarExtra(.window)` popover sizes itself to the **ideal** size of its
+content, and a `ScrollView` reports an ideal height of roughly zero. Left
+alone, the popover collapses to the height of the header and the entire
+control area is clipped away — the panel looks like a title bar with
+nothing under it, while the accessibility tree still lists every control.
+
+The fix is to give the scroll area an explicit height. Two things were
+tried and rejected along the way:
+
+- **Measuring the content** with a `GeometryReader` in a background inside
+  the scroll view reports a height of `0`, so the area collapses again and
+  the measurement never recovers.
+- **Relying on the ideal size** of the content inside the scroll view does
+  not work either, for the same reason.
+
+So the scroll area has a fixed height: 560 pt once the earbuds are known
+and 90 pt while it is still connecting, which keeps the popover short in
+the states where there is nothing to show. The panel is 320 pt wide and
+never taller than 641 pt, so it fits on any Mac display together with the
+menu bar.
+
 ## State handling
 
 The device sleeps aggressively, and the baseband link drops with it. The
