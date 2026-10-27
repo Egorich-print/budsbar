@@ -38,10 +38,12 @@ else
 	echo "==> SDK: toolchain default"
 fi
 
+# The `${arr[@]+...}` form keeps `set -u` happy when the array is empty —
+# plain "${arr[@]}" is an unbound-variable error in bash 3.2.
 echo "==> Building ($CONFIG)"
-swift build -c "$CONFIG" "${SDK_ARGS[@]}" --product "$APP_NAME"
+swift build -c "$CONFIG" ${SDK_ARGS[@]+"${SDK_ARGS[@]}"} --product "$APP_NAME"
 
-BIN="$(swift build -c "$CONFIG" "${SDK_ARGS[@]}" --show-bin-path)/$APP_NAME"
+BIN="$(swift build -c "$CONFIG" ${SDK_ARGS[@]+"${SDK_ARGS[@]}"} --show-bin-path)/$APP_NAME"
 if [[ ! -x "$BIN" ]]; then
 	echo "error: binary not found at $BIN" >&2
 	exit 1

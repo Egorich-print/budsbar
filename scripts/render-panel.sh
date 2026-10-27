@@ -32,9 +32,9 @@ if [[ -n "$SDK" ]]; then
 fi
 
 echo "==> Building renderer"
-swift build -c release "${SDK_ARGS[@]}" --product BudsPanelShot
+swift build -c release ${SDK_ARGS[@]+"${SDK_ARGS[@]}"} --product BudsPanelShot
 
-BIN="$(swift build -c release "${SDK_ARGS[@]}" --show-bin-path)/BudsPanelShot"
+BIN="$(swift build -c release ${SDK_ARGS[@]+"${SDK_ARGS[@]}"} --show-bin-path)/BudsPanelShot"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS"
 cp "$BIN" "$APP/Contents/MacOS/PanelShot"
