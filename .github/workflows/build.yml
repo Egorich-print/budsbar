@@ -1,0 +1,78 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Test (macOS ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_$(ls /Applications | grep -o 'Xcode_[0-9.]*' | head -1 | sed 's/Xcode_//').app
+
+      - name: Show toolchain
+        run: swift --version && xcodebuild -version
+
+      - name: Build
+        run: swift build -c release
+
+      - name: Test
+        run: swift test
+
+  bundle:
+    name: Assemble app bundle
+    runs-on: macos-15
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the .app
+        run: ./scripts/build-app.sh
+
+      - name: Package
+        run: |
+          cd build
+          tar -czf BudsBar-${{ runner.os }}.tar.gz BudsBar.app
+          shasum -a 256 BudsBar-${{ runner.os }}.tar.gz > BudsBar-${{ runner.os }}.tar.gz.sha256
+          cat BudsBar-${{ runner.os }}.tar.gz.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BudsBar-app
+          path: build/BudsBar-*.tar.gz*
+
+  release:
+    name: Publish release
+    needs: bundle
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the .app
+        run: ./scripts/build-app.sh
+
+      - name: Package
+        run: |
+          cd build
+          tar -czf BudsBar-${{ runner.os }}.tar.gz BudsBar.app
+          shasum -a 256 BudsBar-${{ runner.os }}.tar.gz > BudsBar-${{ runner.os }}.tar.gz.sha256
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/BudsBar-${{ runner.os }}.tar.gz
+            build/BudsBar-${{ runner.os }}.tar.gz.sha256

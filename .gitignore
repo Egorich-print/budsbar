@@ -1,0 +1,24 @@
+# Build artifacts
+build/
+.build/
+*.o
+*.swiftmodule
+.swiftpm/
+Package.resolved
+
+# Secrets — never commit
+secrets.md
+*.secret
+*.key
+*.pem
+.env
+.env.*
+
+# macOS
+.DS_Store
+*.icns.tmp
+
+# Editors
+.idea/
+.vscode/
+*.xcuserstate
