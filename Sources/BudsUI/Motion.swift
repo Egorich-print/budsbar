@@ -229,6 +229,10 @@ struct LevelArc: View {
     var level: Double
     /// 0...1 growth progress of the arc.
     var progress: Double
+    /// Outer size of the arc, in points.
+    var size: CGFloat = 34
+    /// Stroke width of the arc, in points.
+    var lineWidth: CGFloat = 2.5
 
     private var filled: Double { min(max(level, 0), 1) * min(max(progress, 0), 1) }
 
@@ -236,7 +240,7 @@ struct LevelArc: View {
         ZStack {
             Circle()
                 .trim(from: 0, to: 0.667)
-                .stroke(Color.secondary.opacity(0.18), style: .init(lineWidth: 2.5, lineCap: .round))
+                .stroke(Color.secondary.opacity(0.18), style: .init(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(150))
 
             Circle()
@@ -246,11 +250,11 @@ struct LevelArc: View {
                         colors: filled > 0.85 ? [Color.accentColor, .red] : [Color.accentColor, Color.accentColor.opacity(0.7)],
                         center: .center
                     ),
-                    style: .init(lineWidth: 2.5, lineCap: .round)
+                    style: .init(lineWidth: lineWidth, lineCap: .round)
                 )
                 .rotationEffect(.degrees(150))
         }
-        .frame(width: 34, height: 34)
+        .frame(width: size, height: size)
     }
 }
 

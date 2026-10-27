@@ -34,6 +34,28 @@ public enum OutputVolume {
         return size
     }
 
+    /// The "virtual main volume" selector.
+    ///
+    /// Bluetooth audio devices expose their software volume through this
+    /// property rather than through `kAudioDevicePropertyVolumeScalar`: it
+    /// is the single value CoreAudio keeps for the sink, and the one the
+    /// earbuds follow. The constant is not part of the public SDK headers,
+    /// but it is the value CoreAudio itself uses for Bluetooth devices.
+    static let virtualMainVolume: AudioObjectPropertySelector = 0x766D7663  // 'vmvc'
+
+    /// The properties that can carry a device's output volume, in the order
+    /// they are tried.
+    ///
+    /// The virtual main volume comes first because it is the only one a
+    /// Bluetooth sink is guaranteed to have. The per-channel scalars follow
+    /// for devices that expose no aggregate volume.
+    static let volumeProperties: [(selector: AudioObjectPropertySelector, element: AudioObjectPropertyElement)] = [
+        (virtualMainVolume, 0),
+        (kAudioDevicePropertyVolumeScalar, kAudioObjectPropertyElementMain),
+        (kAudioDevicePropertyVolumeScalar, 1),
+        (kAudioDevicePropertyVolumeScalar, 0)
+    ]
+
     private static func propertyData(_ device: AudioObjectID, _ address: inout AudioObjectPropertyAddress, _ size: UInt32) -> Data? {
         var buffer = Data(count: Int(size))
         var mutableSize = size
@@ -123,30 +145,61 @@ public enum OutputVolume {
 
     /// Current output volume as a value between 0 and 1.
     public static func level(of device: AudioObjectID) -> Float? {
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyVolumeScalar,
-            mScope: kAudioDevicePropertyScopeOutput,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        guard AudioObjectHasProperty(device, &address) else { return nil }
-        var value: Float32 = 0
-        var size = UInt32(MemoryLayout<Float32>.size)
-        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value) == noErr else { return nil }
-        return min(max(value, 0), 1)
+        for property in volumeProperties {
+            var address = AudioObjectPropertyAddress(
+                mSelector: property.selector,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: property.element
+            )
+            guard AudioObjectHasProperty(device, &address) else { continue }
+            var value: Float32 = 0
+            var size = UInt32(MemoryLayout<Float32>.size)
+            guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value) == noErr else { continue }
+            return min(max(value, 0), 1)
+        }
+        return nil
     }
 
     /// Sets the output volume of a device. `level` is between 0 and 1.
     public static func setLevel(_ level: Float, of device: AudioObjectID) -> Bool {
         let clamped = min(max(level, 0), 1)
+        for property in volumeProperties {
+            var address = AudioObjectPropertyAddress(
+                mSelector: property.selector,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: property.element
+            )
+            guard AudioObjectHasProperty(device, &address) else { continue }
+            var value = Float32(clamped)
+            var size = UInt32(MemoryLayout<Float32>.size)
+            if AudioObjectSetPropertyData(device, &address, 0, nil, size, &value) == noErr {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// Whether a device has an output stream.
+    ///
+    /// A pair of Bluetooth earbuds shows up as two devices with the same
+    /// name: one carries the microphone and one carries the speakers. Only
+    /// the second one has a volume worth driving.
+    public static func isOutputDevice(_ device: AudioObjectID) -> Bool {
         var address = AudioObjectPropertyAddress(
-            mSelector: kAudioDevicePropertyVolumeScalar,
+            mSelector: kAudioDevicePropertyStreamConfiguration,
             mScope: kAudioDevicePropertyScopeOutput,
             mElement: kAudioObjectPropertyElementMain
         )
-        guard AudioObjectHasProperty(device, &address) else { return false }
-        var value = Float32(clamped)
-        var size = UInt32(MemoryLayout<Float32>.size)
-        return AudioObjectSetPropertyData(device, &address, 0, nil, size, &value) == noErr
+        var size = propertySize(device, &address)
+        guard size > 0 else { return false }
+        let raw = UnsafeMutableRawPointer.allocate(byteCount: Int(size), alignment: MemoryLayout<AudioBufferList>.alignment)
+        defer { raw.deallocate() }
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, raw) == noErr else { return false }
+        let list = raw.assumingMemoryBound(to: AudioBufferList.self)
+        for buffer in UnsafeMutableAudioBufferListPointer(list) where buffer.mNumberChannels > 0 {
+            return true
+        }
+        return false
     }
 
     /// Converts a decibel value to the linear scalar CoreAudio expects.

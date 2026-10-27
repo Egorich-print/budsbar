@@ -112,6 +112,7 @@ public struct PanelContent<Model: BudsViewModel>: View {
                 .frame(width: 14)
             Slider(value: volumeBinding, in: 0...1)
                 .controlSize(.small)
+            LevelArc(level: volume.level, progress: 1, size: 20, lineWidth: 2.5)
             Text("\(Int(volume.level * 100))")
                 .font(.system(size: 10, weight: .medium))
                 .monospacedDigit()

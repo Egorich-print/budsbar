@@ -44,7 +44,11 @@ final class VolumeModel: ObservableObject {
 
     /// Re-resolves the audio output device that belongs to the earbuds.
     func reload() {
-        let candidates = OutputVolume.allDevices()
+        // A pair of Bluetooth earbuds registers two devices under the same
+        // name: one carries the microphone, the other the speakers. Only a
+        // device with an output stream can hold a volume worth driving, so
+        // the input device is filtered out first.
+        let candidates = OutputVolume.allDevices().filter { OutputVolume.isOutputDevice($0) }
         // Prefer a Bluetooth output whose name mentions the earbuds.
         let earbud = candidates.first { device in
             let name = OutputVolume.name(of: device).lowercased()

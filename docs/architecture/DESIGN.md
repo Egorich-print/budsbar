@@ -35,8 +35,8 @@ from scratch with SwiftUI `Canvas` and shape primitives.
 
 | Event | Motion | Timing |
 |---|---|---|
-| Connect | Two rings radiate from the glyph, the outer one staggered by 0.12 s | 0.55 s per ring |
-| Disconnect | Rings contract, glyph desaturates | 0.30 s |
+| Connect | A conic sweep spins behind the glyph while three rings radiate outward, staggered by 0.18 s | 0.72 s per ring |
+| Disconnect | Glyph desaturates, the sweep stops | 0.30 s |
 | Noise control | Waves collapse inward when cancelling, drift outward otherwise; a halo blooms behind the glyph | 0.35 s |
 | Equalizer | Five bars re-shape to the new curve, left to right | 0.36 s |
 | Volume | A 240° arc fills to the new level, turning red above 85 % | 0.12 s |
@@ -52,6 +52,26 @@ Guidelines followed:
   repeating it is a UX smell. The panel shows the value, and the arc
   is a readout rather than a celebration.
 - **Alerts are static.** A low battery is a colour, not a motion.
+
+## Hand-drawn controls
+
+The segmented controls, value menus and the switch are drawn in SwiftUI
+rather than taken from AppKit. Two reasons:
+
+- **Rendering.** `NSSegmentedControl`, `NSPopUpButton` and `NSSwitch` draw
+  their labels on layers that an offscreen capture does not reach, so the
+  documentation renders showed empty pills and a permanently off switch.
+  Drawing the controls in SwiftUI makes the captured image identical to
+  what the app shows.
+- **Consistency.** The panel already speaks its own visual language —
+  accent-tinted segments, rounded chips, a blooming halo. Stock chrome sat
+  awkwardly next to it.
+
+Accessibility is not lost: the hand-drawn switch exposes a native `Toggle`
+through `accessibilityRepresentation`, the segments are buttons carrying the
+selected trait, and the value menus report their current value as the
+accessibility value. The live panel's accessibility tree was checked
+against the running app.
 
 ## WidgetKit
 
@@ -89,3 +109,16 @@ The earbuds expose no volume command. The in-ear volume is whatever
 macOS sends to the Bluetooth sink, so the slider drives the CoreAudio
 output device whose name matches the earbuds. A device-side "sound
 quality preference" setting steers the codec preference separately.
+
+Two details make the bridge work on Bluetooth devices:
+
+- A pair of earbuds registers **two** CoreAudio devices under the same
+  name — one for the microphone, one for the speakers. Only the one with
+  an output stream is a valid volume target, so the input device is
+  filtered out before the name is matched.
+- Bluetooth sinks expose their software volume through the **virtual main
+  volume** property (`'vmvc'`), not through
+  `kAudioDevicePropertyVolumeScalar`. The selector is not in the public
+  SDK headers, but it is the property CoreAudio itself keeps for a
+  Bluetooth device, and the earbuds follow it. The scalar properties are
+  still tried as a fallback for other devices.

@@ -52,7 +52,7 @@ reads as one wave.**
 
 ## What was built
 
-`Sources/BudsBar/Motion.swift` implements the same **motion idea** with
+`Sources/BudsUI/Motion.swift` implements the same **motion idea** with
 original geometry, palette, timing and rendering technique:
 
 | Element | Implementation |

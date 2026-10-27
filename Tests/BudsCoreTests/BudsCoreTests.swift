@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 import Testing
+import CoreAudio
 @testable import BudsCore
 
 @Suite("Wire format")
@@ -135,5 +136,31 @@ struct CommandTests {
         let request = ProtocolCatalogue.setLowLatency(true)
         #expect(request.command == Command.lowLatency)
         #expect(request.fields[1] == [0x01])
+    }
+}
+
+@Suite("Output volume")
+struct OutputVolumeTests {
+
+    /// A Bluetooth sink keeps its software volume in the virtual main
+    /// volume property, and only in the per-channel scalars as a fallback.
+    /// The order matters: reading the wrong one leaves the slider dead.
+    @Test("The virtual main volume is tried before the channel scalars")
+    func virtualVolumeIsTriedFirst() {
+        let selectors = OutputVolume.volumeProperties.map(\.selector)
+        #expect(selectors.first == OutputVolume.virtualMainVolume)
+        #expect(selectors.contains(kAudioDevicePropertyVolumeScalar))
+    }
+
+    /// Every device the system reports has a name, and the input half of a
+    /// Bluetooth headset is not mistaken for a volume target.
+    @Test("Input-only devices are not treated as outputs")
+    func inputDevicesAreNotOutputs() {
+        for device in OutputVolume.allDevices() {
+            #expect(!OutputVolume.name(of: device).isEmpty)
+            if !OutputVolume.isOutputDevice(device) {
+                #expect(OutputVolume.level(of: device) == nil)
+            }
+        }
     }
 }
