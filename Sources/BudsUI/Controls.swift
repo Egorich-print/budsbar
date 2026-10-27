@@ -2,13 +2,18 @@
 // SPDX-License-Identifier: MIT
 //
 // The panel is drawn with SwiftUI primitives rather than AppKit-backed
-// `Picker` styles for two reasons:
+// `Picker` styles and the system switch, for two reasons:
 //
-//  1. A segmented `Picker` is backed by `NSSegmentedControl`, whose segment
-//     labels are drawn on a layer that an offscreen capture cannot reach —
-//     the documentation renders would show empty pills.
-//  2. Drawing the control ourselves lets the selection use the project's
-//     own motion language, instead of the stock macOS chrome.
+//  1. `NSSegmentedControl`, `NSPopUpButton` and `NSSwitch` draw their
+//     labels and states on layers that an offscreen capture does not reach —
+//     the documentation renders would show empty pills and a permanently
+//     off switch.
+//  2. Drawing the controls ourselves lets them use the project's own
+//     visual language, instead of the stock macOS chrome.
+//
+// The controls keep their native semantics for assistive technologies:
+// the switch exposes a `Toggle`, the segments are buttons carrying the
+// selected trait, and the menus report their value.
 
 import SwiftUI
 
