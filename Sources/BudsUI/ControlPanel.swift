@@ -26,6 +26,22 @@ private struct HeaderHeightKey: PreferenceKey {
     }
 }
 
+/// The measured heights of the panel.
+///
+/// The content is measured during the layout pass, and the result is handed
+/// back through a preference whose action is a sendable closure — such a
+/// closure cannot touch the state of the view. The measurements therefore
+/// live in an object of their own: it is isolated to the main actor, so it
+/// can be captured by the closure and written to safely.
+@MainActor
+final class PanelMetrics: ObservableObject {
+    /// Height of the scrollable content.
+    @Published var contentHeight: CGFloat = 0
+
+    /// Height of the header block.
+    @Published var headerHeight: CGFloat = 0
+}
+
 /// Freezes the connect animation at a given instant.
 ///
 /// The animation normally follows the wall clock. The documentation renderer
@@ -44,11 +60,8 @@ public struct ControlPanel<Model: BudsViewModel>: View {
     @Environment(\.budsFrozenAnimationDate) private var frozenAnimationDate
     private let scrollable: Bool
 
-    /// Measured height of the scrollable content.
-    @State private var contentHeight: CGFloat = 0
-
-    /// Measured height of the header block.
-    @State private var headerHeight: CGFloat = 0
+    /// The measured heights of the panel.
+    @StateObject private var metrics = PanelMetrics()
 
     /// The error the user dismissed, so it does not come back on its own.
     @State private var dismissedError: String?
@@ -77,7 +90,7 @@ public struct ControlPanel<Model: BudsViewModel>: View {
         .onChange(of: controller.lastError) { _, newValue in
             if newValue == nil { dismissedError = nil }
         }
-        .onChange(of: contentHeight) { _, newValue in
+        .onChange(of: metrics.contentHeight) { _, newValue in
             resizePanelWindow(contentHeight: newValue)
         }
     }
@@ -122,7 +135,7 @@ public struct ControlPanel<Model: BudsViewModel>: View {
     /// The measured value is used once the header has been laid out; until
     /// then the estimate stands in for it.
     private var effectiveHeaderHeight: CGFloat {
-        headerHeight > 0 ? headerHeight : 82
+        metrics.headerHeight > 0 ? metrics.headerHeight : 82
     }
 
     // MARK: - Header
@@ -133,7 +146,10 @@ public struct ControlPanel<Model: BudsViewModel>: View {
     /// real numbers instead of a constant that goes stale as soon as the
     /// header changes.
     private var headerBlock: some View {
-        VStack(spacing: 0) {
+        // Bound locally so that the preference action below captures the
+        // metrics object — which is safe to send — and not the view.
+        let metrics = self.metrics
+        return VStack(spacing: 0) {
             header
             Divider()
         }
@@ -143,8 +159,12 @@ public struct ControlPanel<Model: BudsViewModel>: View {
             }
         }
         .onPreferenceChange(HeaderHeightKey.self) { height in
-            guard height > 0, abs(height - headerHeight) > 0.5 else { return }
-            headerHeight = height
+            // The action is a sendable closure, so it cannot touch the view
+            // itself; the measurement goes into the metrics object instead.
+            MainActor.assumeIsolated {
+                guard height > 0, abs(height - metrics.headerHeight) > 0.5 else { return }
+                metrics.headerHeight = height
+            }
         }
     }
 
@@ -162,7 +182,10 @@ public struct ControlPanel<Model: BudsViewModel>: View {
     /// `GeometryReader` reports zero, because the scroll view proposes no
     /// height of its own; pinning the content with `fixedSize` gives it one.
     private var scrollArea: some View {
-        ScrollView {
+        // Bound locally so that the preference action below captures the
+        // metrics object — which is safe to send — and not the view.
+        let metrics = self.metrics
+        return ScrollView {
             PanelContent(controller: controller)
                 .padding(14)
                 .fixedSize(horizontal: false, vertical: true)
@@ -174,16 +197,21 @@ public struct ControlPanel<Model: BudsViewModel>: View {
         }
         .frame(height: scrollHeight)
         .onPreferenceChange(ContentHeightKey.self) { height in
-            guard height > 0, abs(height - contentHeight) > 0.5 else { return }
-            contentHeight = height
+            // The action is a sendable closure, so it cannot touch the view
+            // itself; the measurement goes into the metrics object instead.
+            MainActor.assumeIsolated {
+                guard height > 0, abs(height - metrics.contentHeight) > 0.5 else { return }
+                metrics.contentHeight = height
+            }
         }
     }
 
     /// Height of the scroll area: the content itself, or less when the
     /// screen cannot show it all.
     private var scrollHeight: CGFloat {
-        guard contentHeight > 0 else { return maxScrollHeight }
-        return min(contentHeight, maxScrollHeight)
+        let height = metrics.contentHeight
+        guard height > 0 else { return maxScrollHeight }
+        return min(height, maxScrollHeight)
     }
 
     /// The largest height the scroll area may take.
