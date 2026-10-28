@@ -128,6 +128,11 @@ public struct DeviceState: Equatable, Sendable {
     /// True once the device answered at least one query.
     public var isIdentified: Bool { identity.modelCode != nil }
 
+    /// The noise-control options this model really offers.
+    public var capabilities: DeviceCapabilities {
+        DeviceCapabilities.forModel(identity.modelCode)
+    }
+
     public init() {}
 }
 

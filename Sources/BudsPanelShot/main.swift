@@ -68,7 +68,9 @@ func makeState(_ variant: String) -> DeviceState {
         state.battery = BatteryReading()
     case "cancelling":
         state.noiseMode = .cancellation
-        state.cancellationLevel = 2
+        // The deepest level is not implemented on this model, so the
+        // preview uses one of the levels it really offers.
+        state.cancellationLevel = 3
         state.equalizerPreset = 2
         state.lowLatencyEnabled = true
         state.soundQuality = .quality
@@ -82,7 +84,9 @@ func makeState(_ variant: String) -> DeviceState {
             availableHoldActions: [0, 10, 18, 19, 255]
         )
     default:
-        state.noiseMode = .awareness
+        // The FreeBuds 6 has no transparency mode, so the preview shows the
+        // model without it.
+        state.noiseMode = .off
         state.cancellationLevel = 0
         state.equalizerPreset = 0
         state.lowLatencyEnabled = false

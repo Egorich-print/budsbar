@@ -85,7 +85,7 @@ write command id and are followed by the device pushing current state.
 | Device info | `0x0107` | — | 3 = build id (unstable), 7 = firmware, 9 = serial, 10 = product id, 15 = model code, 24 = per-side serials |
 | Battery | `0x0108` | — | 2 = `[left, right, case]`, 6 = charging flags |
 | Battery push | `0x0127` | — | same layout as `0x0108` |
-| Noise mode | `0x2B2A` | `0x2B04` | read: 1 = `[strength, mode]`; write: 1 = `[mode, strength]` |
+| Noise mode | `0x2B2A` | `0x2B04` | read: 1 = `[status, mode]`; write: 1 = `[mode, strength]` |
 | Equalizer | `0x2B4A` | `0x2B49` | read: 2 = current preset, 3 = available ids; write: 1 = preset id |
 | Double tap | `0x0120` | `0x011F` | 1 = left action, 2 = right action, 3 = available actions |
 | Triple tap | `0x0126` | `0x0125` | same layout |
@@ -101,8 +101,20 @@ write command id and are followed by the device pushing current state.
 ### Asymmetries worth remembering
 
 - **Noise mode**: the write payload is `[mode, strength]` but the read
-  response is `[strength, mode]`. Strength `0xFF` in a write means "keep the
+  response is `[status, mode]`. Strength `0xFF` in a write means "keep the
   current strength"; turning noise control off sends strength `0x00`.
+- **Noise mode, first read field**: the value is the *effect the firmware
+  reports*, not the cancellation strength — `1` with noise control off, `2`
+  with transparency, `3` with noise cancelling. The device never reports how
+  strong the cancellation is, so the strength cannot be read back.
+- **Noise mode, strength byte**: on the FreeBuds 6 the firmware accepts the
+  strength byte but does not apply it. Writing `[1, 1]`, `[1, 2]`, `[1, 0]`,
+  `[0xFF, n]`, the strength in a second field, or the strength on its own —
+  all leave the reported effect at `3`. The mode in the same payload *is*
+  applied. No other command was found that carries a cancellation strength,
+  and the device does not advertise its noise-control options, so the set of
+  modes and levels a model offers is a property of the model, not something
+  the app can ask the device about.
 - **Gestures**: the write stores the action code in the field that selects the
   earbud — tag 1 for left, tag 2 for right — not in a separate "action" field.
 - **Equalizer**: selecting a built-in preset writes a single field (tag 1)

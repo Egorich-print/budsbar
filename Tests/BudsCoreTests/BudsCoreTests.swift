@@ -164,3 +164,29 @@ struct OutputVolumeTests {
         }
     }
 }
+
+@Suite("Device capabilities")
+struct DeviceCapabilitiesTests {
+
+    /// The FreeBuds 6 has no transparency mode and no deepest level.
+    @Test("The FreeBuds 6 offers no awareness mode")
+    func freebuds6HasNoAwareness() {
+        let capabilities = DeviceCapabilities.forModel("BTFT0020")
+        #expect(capabilities.noiseModes == [.off, .cancellation])
+        #expect(!capabilities.noiseModes.contains(.awareness))
+    }
+
+    @Test("The FreeBuds 6 offers three cancellation levels")
+    func freebuds6Levels() {
+        let capabilities = DeviceCapabilities.forModel("BTFT0020")
+        #expect(capabilities.cancellationLevels == [0, 1, 3])
+        #expect(!capabilities.cancellationLevels.contains(CancellationLevel.deep.rawValue))
+    }
+
+    /// An unknown model must not end up with an empty panel.
+    @Test("An unknown model gets every option")
+    func unknownModelGetsEverything() {
+        #expect(DeviceCapabilities.forModel(nil) == .full)
+        #expect(DeviceCapabilities.forModel("BTFT9999") == .full)
+    }
+}

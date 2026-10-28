@@ -3,10 +3,27 @@
 
 import SwiftUI
 import Foundation
+import AppKit
 import BudsCore
 
 private struct FrozenAnimationDateKey: EnvironmentKey {
     static let defaultValue: Date? = nil
+}
+
+/// Carries the measured height of the scrollable content.
+private struct ContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat { 0 }
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+/// Carries the measured height of the header block.
+private struct HeaderHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat { 0 }
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
 }
 
 /// Freezes the connect animation at a given instant.
@@ -24,18 +41,17 @@ public extension EnvironmentValues {
 /// The popover panel shown from the menu bar.
 public struct ControlPanel<Model: BudsViewModel>: View {
     @ObservedObject var controller: Model
-    @StateObject private var volume = VolumeModel()
     @Environment(\.budsFrozenAnimationDate) private var frozenAnimationDate
     private let scrollable: Bool
 
-    /// Height of the control area once the earbuds are known.
-    ///
-    /// The panel is a menu-bar popover: it has to stay on screen together
-    /// with the menu bar, so the content scrolls once it grows past this.
-    private let maxScrollHeight: CGFloat = 560
+    /// Measured height of the scrollable content.
+    @State private var contentHeight: CGFloat = 0
 
-    /// Height of the control area while the earbuds are not known yet.
-    private let minScrollHeight: CGFloat = 90
+    /// Measured height of the header block.
+    @State private var headerHeight: CGFloat = 0
+
+    /// The error the user dismissed, so it does not come back on its own.
+    @State private var dismissedError: String?
 
     public init(controller: Model, scrollable: Bool = true) {
         self.controller = controller
@@ -44,8 +60,10 @@ public struct ControlPanel<Model: BudsViewModel>: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            header
-            Divider()
+            headerBlock
+            if let message = activeError {
+                errorBanner(message)
+            }
             if scrollable {
                 scrollArea
             } else {
@@ -54,25 +72,161 @@ public struct ControlPanel<Model: BudsViewModel>: View {
             }
         }
         .frame(width: 320)
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(.regularMaterial)
+        .onChange(of: controller.lastError) { _, newValue in
+            if newValue == nil { dismissedError = nil }
+        }
+        .onChange(of: contentHeight) { _, newValue in
+            resizePanelWindow(contentHeight: newValue)
+        }
+    }
+
+    // MARK: - Panel sizing
+
+    /// Resizes the popover window so that the panel fits its content.
+    ///
+    /// The menu bar extra sizes its window once, when the popover appears,
+    /// and never touches it again. The window is therefore created with the
+    /// height the panel guessed it would need, and a guess that is even a
+    /// little too small cuts the last controls off. The content is measured
+    /// instead, and the window is resized to match — the measurement happens
+    /// while the popover is still being laid out, so the user never sees the
+    /// wrong size.
+    private func resizePanelWindow(contentHeight: CGFloat) {
+        guard contentHeight > 0, let window = panelWindow else { return }
+        let target = min(
+            effectiveHeaderHeight + contentHeight,
+            effectiveHeaderHeight + maxScrollHeight
+        )
+        guard abs(window.frame.height - target) > 0.5 else { return }
+        var frame = window.frame
+        frame.size.height = target
+        window.setFrame(frame, display: true)
+    }
+
+    /// The window that shows the panel.
+    ///
+    /// The menu bar extra hosts the popover in a window of its own. It is
+    /// found by the view it holds: the status bar windows of the app hold
+    /// the menu bar item instead.
+    private var panelWindow: NSWindow? {
+        NSApp.windows.first { window in
+            guard let content = window.contentView else { return false }
+            return String(describing: type(of: content)).contains("MenuBarExtraHostingView")
+        }
+    }
+
+    /// Height of the header block.
+    ///
+    /// The measured value is used once the header has been laid out; until
+    /// then the estimate stands in for it.
+    private var effectiveHeaderHeight: CGFloat {
+        headerHeight > 0 ? headerHeight : 82
+    }
+
+    // MARK: - Header
+
+    /// The header and the divider below it.
+    ///
+    /// The block is measured so that the popover window can be sized from
+    /// real numbers instead of a constant that goes stale as soon as the
+    /// header changes.
+    private var headerBlock: some View {
+        VStack(spacing: 0) {
+            header
+            Divider()
+        }
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: HeaderHeightKey.self, value: proxy.size.height)
+            }
+        }
+        .onPreferenceChange(HeaderHeightKey.self) { height in
+            guard height > 0, abs(height - headerHeight) > 0.5 else { return }
+            headerHeight = height
+        }
     }
 
     // MARK: - Scroll area
 
     /// The scrollable body of the panel.
     ///
-    /// The height is fixed rather than measured. A `ScrollView` reports an
-    /// ideal height of roughly zero, and the popover sizes itself to the
-    /// ideal — so without an explicit height the panel collapses to the
-    /// header and the whole control area is clipped away. Measuring the
-    /// content with a `GeometryReader` does not work here either: inside a
-    /// scroll view it reports zero, which collapses the area again.
+    /// The height follows the content instead of being a guess. A
+    /// `ScrollView` reports an ideal height of roughly zero and the popover
+    /// sizes itself to the ideal, so the height has to be given explicitly —
+    /// but a fixed guess cuts the last line off as soon as the content grows.
+    ///
+    /// The content is therefore measured: it is pinned to its natural height
+    /// and read back through a preference. Inside a scroll view a plain
+    /// `GeometryReader` reports zero, because the scroll view proposes no
+    /// height of its own; pinning the content with `fixedSize` gives it one.
     private var scrollArea: some View {
         ScrollView {
             PanelContent(controller: controller)
                 .padding(14)
+                .fixedSize(horizontal: false, vertical: true)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: ContentHeightKey.self, value: proxy.size.height)
+                    }
+                }
         }
-        .frame(height: controller.state.isIdentified ? maxScrollHeight : minScrollHeight)
+        .frame(height: scrollHeight)
+        .onPreferenceChange(ContentHeightKey.self) { height in
+            guard height > 0, abs(height - contentHeight) > 0.5 else { return }
+            contentHeight = height
+        }
+    }
+
+    /// Height of the scroll area: the content itself, or less when the
+    /// screen cannot show it all.
+    private var scrollHeight: CGFloat {
+        guard contentHeight > 0 else { return maxScrollHeight }
+        return min(contentHeight, maxScrollHeight)
+    }
+
+    /// The largest height the scroll area may take.
+    ///
+    /// The panel is a menu-bar popover, so it has to fit on the screen
+    /// together with the menu bar. The smallest visible screen is used, so
+    /// the panel also fits when it is opened on a smaller display.
+    private var maxScrollHeight: CGFloat {
+        let screenHeight = NSScreen.screens.map(\.visibleFrame.height).min() ?? 900
+        return max(240, screenHeight - 60 - effectiveHeaderHeight)
+    }
+
+    // MARK: - Errors
+
+    /// The error to show, unless the user dismissed exactly this one.
+    private var activeError: String? {
+        guard let error = controller.lastError else { return nil }
+        return error == dismissedError ? nil : error
+    }
+
+    /// A compact notice that the earbuds refused or missed a change.
+    private func errorBanner(_ message: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 10))
+                .foregroundStyle(.orange)
+            Text(message)
+                .font(.system(size: 11))
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 4)
+            Button {
+                dismissedError = message
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .semibold))
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Dismiss")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.orange.opacity(0.14))
     }
 
     // MARK: - Header

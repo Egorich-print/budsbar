@@ -97,20 +97,38 @@ alone, the popover collapses to the height of the header and the entire
 control area is clipped away — the panel looks like a title bar with
 nothing under it, while the accessibility tree still lists every control.
 
-The fix is to give the scroll area an explicit height. Two things were
-tried and rejected along the way:
+The fix is to give the scroll area an explicit height, and to keep that
+height in step with the content. Two things were tried and rejected along the
+way:
 
-- **Measuring the content** with a `GeometryReader` in a background inside
-  the scroll view reports a height of `0`, so the area collapses again and
-  the measurement never recovers.
 - **Relying on the ideal size** of the content inside the scroll view does
-  not work either, for the same reason.
+  not work, for the same reason.
+- **Measuring the content** with a plain `GeometryReader` in a background
+  inside the scroll view reports a height of `0`, so the area collapses again
+  and the measurement never recovers. The scroll view proposes no height of
+  its own; pinning the content with `fixedSize(horizontal: false, vertical:
+  true)` gives it one, and the measurement then works.
 
-So the scroll area has a fixed height: 560 pt once the earbuds are known
-and 90 pt while it is still connecting, which keeps the popover short in
-the states where there is nothing to show. The panel is 320 pt wide and
-never taller than 641 pt, so it fits on any Mac display together with the
-menu bar.
+So the content is measured and the scroll area takes that height. The popover
+window needs one more step: `MenuBarExtra` sizes its window **once**, when the
+popover appears, and never touches it again, so the window keeps whatever
+height the panel guessed while the content was still being laid out. The
+panel therefore resizes the window itself (`NSWindow.setFrame`) as soon as the
+measurement arrives. The measurement happens during the initial layout, so the
+user never sees the wrong size, and the panel grows and shrinks with the
+content: 619 pt with the earbuds connected and noise control off, 654 pt with
+the cancellation level shown.
+
+The panel is 320 pt wide, and the scroll area never grows past the height
+that fits on the smallest attached display together with the menu bar — past
+that point the area scrolls.
+
+## Feedback on refused changes
+
+Every write is read back from the earbuds, so the app knows whether a change
+was accepted. The panel shows a compact banner when it was not: the control
+keeps its old value, and the banner explains what happened instead of
+failing silently.
 
 ## State handling
 

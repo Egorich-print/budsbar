@@ -17,14 +17,15 @@ switch noise control, sound presets, and touch gestures from the menu bar.
 | Feature | Notes |
 |---|---|
 | **Battery** | Left earbud, right earbud and case, with charging indicators |
-| **Noise control** | Off / Noise cancelling / Awareness, with cancellation strength |
+| **Noise control** | Off / Noise cancelling / Awareness — only the modes the model really offers |
 | **Sound** | Equalizer preset, low-latency mode, sound-quality preference |
 | **Volume** | Output volume for the earbuds, driven through the macOS audio stack |
 | **Gestures** | Double tap, triple tap and hold — separately per earbud |
 | **Device info** | Model code, firmware, serial numbers |
 
 Every setting is **read back from the earbuds** before it is reported as
-applied, so the panel never shows a value the device did not accept.
+applied, so the panel never shows a value the device did not accept. When a
+change is refused, the panel says so instead of failing silently.
 
 | Connected | Noise cancelling |
 |---|---|
@@ -114,10 +115,15 @@ Verified on **HUAWEI FreeBuds 6** (model `BTFT0020`, firmware
 `HarmonyOS 6.1.0.358`, macOS 26.x, Apple Silicon).
 
 The protocol is shared across the FreeBuds line and the app is written to
-adapt to what the device reports rather than to a hardcoded model list —
-equalizer presets, gesture actions and cancellation levels are all driven by
-values the earbuds themselves advertise. Other models are untested; the app
-will show what it can read and leave the rest unknown.
+adapt to what the device reports — equalizer presets and gesture actions are
+driven by values the earbuds themselves advertise. The one exception is the
+set of noise-control options: the device does not advertise them and accepts
+values its hardware does not implement, so those come from a small table
+keyed by model code. The FreeBuds 6, for example, offers noise cancelling
+without a transparency mode.
+
+Other models are untested; the app will show what it can read and leave the
+rest unknown.
 
 ## Project layout
 

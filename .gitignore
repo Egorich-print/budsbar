@@ -1,3 +1,6 @@
+# Local backups taken before edits
+backups/
+
 # Build artifacts
 build/
 .build/

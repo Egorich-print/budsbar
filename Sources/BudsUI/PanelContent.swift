@@ -63,14 +63,14 @@ public struct PanelContent<Model: BudsViewModel>: View {
         SectionCard(title: "Noise Control", systemImage: "ear") {
             VStack(alignment: .leading, spacing: 10) {
                 SegmentedChoice(
-                    options: NoiseMode.allCases.map { ChoiceOption(value: $0, title: $0.title) },
+                    options: noiseOptions,
                     selection: noiseBinding,
                     label: "Noise control"
                 )
 
                 if controller.state.noiseMode == .cancellation {
                     SegmentedChoice(
-                        options: CancellationLevel.allCases.map { ChoiceOption(value: $0, title: $0.title) },
+                        options: levelOptions,
                         selection: levelBinding,
                         label: "Cancellation level"
                     )
@@ -187,6 +187,32 @@ public struct PanelContent<Model: BudsViewModel>: View {
     }
 
     // MARK: - Bindings
+
+    /// The noise modes the model offers.
+    ///
+    /// The current mode is always kept, even when the model does not list
+    /// it: the panel must show what the earbuds are actually doing.
+    private var noiseOptions: [ChoiceOption<NoiseMode>] {
+        var modes = controller.state.capabilities.noiseModes
+        if let current = controller.state.noiseMode, !modes.contains(current) {
+            modes.append(current)
+        }
+        return modes.map { ChoiceOption(value: $0, title: $0.title) }
+    }
+
+    /// The cancellation levels the model offers.
+    private var levelOptions: [ChoiceOption<CancellationLevel>] {
+        var levels = controller.state.capabilities.cancellationLevels
+            .compactMap { CancellationLevel(rawValue: $0) }
+        if let current = controller.state.cancellationLevel,
+           let level = CancellationLevel(rawValue: current),
+           !levels.contains(level) {
+            levels.append(level)
+        }
+        return levels
+            .sorted { $0.rawValue < $1.rawValue }
+            .map { ChoiceOption(value: $0, title: $0.title) }
+    }
 
     private var equalizerPresets: [Int] {
         let available = controller.state.availableEqualizerPresets
