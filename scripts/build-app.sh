@@ -56,6 +56,21 @@ cp "$BIN" "$APP/Contents/MacOS/$APP_NAME"
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
+# Stamp the version of the release the bundle was built from.
+#
+# The plist carries a fallback for builds made outside a checkout; a build
+# from a tagged commit reports that tag, so the app in the wild says which
+# version it is.
+VERSION="$(git describe --tags --abbrev=0 2>/dev/null || true)"
+VERSION="${VERSION#v}"
+if [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+	/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" \
+		"$APP/Contents/Info.plist" >/dev/null 2>&1 || true
+	/usr/libexec/PlistBuddy -c "Set :CFBundleVersion $VERSION" \
+		"$APP/Contents/Info.plist" >/dev/null 2>&1 || true
+	echo "==> Version $VERSION"
+fi
+
 # Icon: generate a simple template so the bundle has a valid app icon slot.
 if [[ -f "$ROOT/Resources/BudsBar.icns" ]]; then
 	cp "$ROOT/Resources/BudsBar.icns" "$APP/Contents/Resources/BudsBar.icns"

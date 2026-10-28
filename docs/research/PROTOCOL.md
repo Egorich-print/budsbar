@@ -117,6 +117,12 @@ write command id and are followed by the device pushing current state.
   the app can ask the device about.
 - **Gestures**: the write stores the action code in the field that selects the
   earbud — tag 1 for left, tag 2 for right — not in a separate "action" field.
+- **Gesture action codes** are model specific. The FreeBuds 6 reports fifteen
+  hold actions (`[0,1,2,3,4,5,6,7,8,9,10,14,15,17,255]`) and is currently on
+  action `3`; the codes that are known from other models (`18` volume up,
+  `19` volume down) do not even appear in that list. The device publishes the
+  codes but not their meaning, so the panel shows the raw number for the
+  actions it cannot name.
 - **Equalizer**: selecting a built-in preset writes a single field (tag 1)
   holding the preset id. Editing the curve of a custom preset uses a longer
   multi-field payload and is not implemented here.

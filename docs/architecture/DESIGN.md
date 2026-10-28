@@ -123,6 +123,15 @@ The panel is 320 pt wide, and the scroll area never grows past the height
 that fits on the smallest attached display together with the menu bar — past
 that point the area scrolls.
 
+The measurement travels through a preference, and the action of a preference
+is a *sendable* closure: it cannot touch the state of the view. The
+measurements therefore live in a small main-actor object (`PanelMetrics`),
+which is safe to capture, and the view reads them from there. Writing them
+straight into `@State` from the preference action compiles with a recent
+compiler and fails under strict concurrency on an older one — the build then
+passes locally and breaks on CI, which is exactly the kind of difference that
+should not depend on the toolchain.
+
 ## Feedback on refused changes
 
 Every write is read back from the earbuds, so the app knows whether a change
