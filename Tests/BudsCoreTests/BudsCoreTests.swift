@@ -190,3 +190,73 @@ struct DeviceCapabilitiesTests {
         #expect(DeviceCapabilities.forModel("BTFT9999") == .full)
     }
 }
+
+@Suite("Audio codec")
+struct AudioCodecTests {
+
+    /// A line captured from the system log while the earbuds played.
+    private let captured = """
+    2026-10-28 06:14:06.604 Df bluetoothd[169:6c1afe] [com.apple.bluetooth:CBDaemonXPCConnection] GetControllerInfo: , AuLQ [{Time: 2026-10-28 06:14:06.700, AoS 1, BtRt 192 Kbps, Codc AAC-LC, Freq ISM2.4, DvNm 'HUAWEI FreeBuds 6', JtBf 150 ms, NsFl -82, RtmR 51%, RSSI -50, SNR 32}], BlSt PoweredOn, DcsS Off
+    """
+
+    @Test("Reads the codec out of the daemon's controller information")
+    func readsCodec() {
+        let info = CodecDetector.parse(captured, deviceName: "HUAWEI FreeBuds 6")
+        #expect(info.codec == "AAC-LC")
+        #expect(info.bitrateKbps == 192)
+        #expect(info.deviceName == "HUAWEI FreeBuds 6")
+    }
+
+    @Test("Ignores the lines of other devices")
+    func ignoresOtherDevices() {
+        #expect(CodecDetector.parse(captured, deviceName: "Some Other Headset").isEmpty)
+    }
+
+    @Test("Ignores a log without a device name")
+    func ignoresUnknownDevice() {
+        #expect(CodecDetector.parse(captured, deviceName: nil).isEmpty)
+    }
+
+    /// The newest line describes the stream that is running now.
+    @Test("Takes the newest line of the device")
+    func takesNewestLine() {
+        let log = """
+        2026-10-28 06:10:45.628 Df bluetoothd[169:6c0c21] [com.apple.bluetooth:CBDaemonXPCConnection] GetControllerInfo: , AuLQ [{Time: 2026-10-28 06:10:45.629, AoS 1, BtRt 345 Kbps, Codc aptX, Freq ISM2.4, DvNm 'HUAWEI FreeBuds 6'}]
+        2026-10-28 06:14:06.604 Df bluetoothd[169:6c1afe] [com.apple.bluetooth:CBDaemonXPCConnection] GetControllerInfo: , AuLQ [{Time: 2026-10-28 06:14:06.700, AoS 1, BtRt 192 Kbps, Codc AAC-LC, Freq ISM2.4, DvNm 'HUAWEI FreeBuds 6'}]
+        """
+        let info = CodecDetector.parse(log, deviceName: "HUAWEI FreeBuds 6")
+        #expect(info.codec == "AAC-LC")
+        #expect(info.bitrateKbps == 192)
+    }
+
+    /// The command line of the log reader mentions the pattern itself.
+    @Test("Ignores the reader's own command line")
+    func ignoresOwnCommandLine() {
+        let log = """
+        2026-10-28 06:14:07.300 Df log[99956:6c221b] [com.apple.log:] log run noninteractively, parent: 99951 (bash), args: 'log' 'show' '--last' '10s' '--predicate' 'eventMessage CONTAINS "BtRt"'
+        """
+        #expect(CodecDetector.parse(log, deviceName: "HUAWEI FreeBuds 6").isEmpty)
+    }
+
+    @Test("Formats the stream for the panel")
+    func formatsSummary() {
+        let info = AudioCodecInfo(codec: "AAC-LC", bitrateKbps: 192, sampleRate: 44100)
+        #expect(info.summary == "AAC-LC · 192 kbps · 44.1 kHz")
+    }
+
+    /// Without a codec the profile alone still says something true.
+    @Test("Falls back to the Bluetooth profile")
+    func fallsBackToProfile() {
+        let info = AudioCodecInfo(sampleRate: 48000, isBluetooth: true)
+        #expect(info.summary == "48 kHz")
+        #expect(AudioCodecInfo(isBluetooth: true).summary == "Bluetooth A2DP")
+        #expect(AudioCodecInfo().summary == nil)
+    }
+
+    @Test("Formats a sample rate in kilohertz")
+    func formatsSampleRate() {
+        #expect(AudioCodecInfo.rateLabel(48000) == "48 kHz")
+        #expect(AudioCodecInfo.rateLabel(44100) == "44.1 kHz")
+        #expect(AudioCodecInfo.rateLabel(32000) == "32 kHz")
+    }
+}

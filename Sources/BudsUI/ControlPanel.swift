@@ -299,7 +299,10 @@ public struct ControlPanel<Model: BudsViewModel>: View {
 
             if controller.linkState == .connected {
                 Button {
-                    Task { await controller.refresh() }
+                    Task {
+                        await controller.refresh()
+                        await controller.refreshCodec()
+                    }
                 } label: {
                     Image(systemName: "arrow.clockwise")
                         .font(.system(size: 12, weight: .medium))
@@ -353,18 +356,22 @@ public struct ControlPanel<Model: BudsViewModel>: View {
 }
 
 /// A titled card that groups related controls.
-struct SectionCard<Content: View>: View {
+struct SectionCard<Icon: View, Content: View>: View {
     let title: String
-    let systemImage: String
+    @ViewBuilder var icon: Icon
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Label(title, systemImage: systemImage)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .kerning(0.4)
+            Label {
+                Text(title)
+            } icon: {
+                icon
+            }
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.secondary)
+            .textCase(.uppercase)
+            .kerning(0.4)
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)

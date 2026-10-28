@@ -16,6 +16,8 @@ public final class DeviceController: ObservableObject, BudsViewModel {
     @Published public private(set) var linkState: LinkState = .idle
     /// Last error message shown in the UI.
     @Published public private(set) var lastError: String?
+    /// The audio stream the system sends to the earbuds.
+    @Published public private(set) var codecInfo = AudioCodecInfo()
 
     private var link: RFCommLink?
     private var pollTask: Task<Void, Never>?
@@ -61,6 +63,7 @@ public final class DeviceController: ObservableObject, BudsViewModel {
             linkState = .connected
             await refresh()
             startPolling()
+            await refreshCodec()
         } catch {
             linkState = .failed(error.localizedDescription)
             lastError = error.localizedDescription
@@ -335,6 +338,15 @@ public final class DeviceController: ObservableObject, BudsViewModel {
     }
 
     // MARK: - Public actions
+
+    /// Re-reads the codec and the bitrate of the stream to the earbuds.
+    ///
+    /// The earbuds do not report their codec: the system negotiates it with
+    /// the Bluetooth controller, and the result is only visible in the
+    /// system log.
+    public func refreshCodec() async {
+        codecInfo = await CodecDetector.detect(deviceName: state.identity.displayName)
+    }
 
     /// @return true when the earbuds confirmed the new value.
     @discardableResult

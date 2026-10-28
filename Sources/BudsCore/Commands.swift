@@ -45,17 +45,6 @@ public enum NoiseMode: Int, Sendable, CaseIterable, Identifiable {
         }
     }
 
-    /// SF Symbol shown in the menu bar and the panel.
-    ///
-    /// The symbol set varies between macOS releases, so only long-standing
-    /// names are used here.
-    public var symbol: String {
-        switch self {
-        case .off: "ear"
-        case .cancellation: "ear.fill"
-        case .awareness: "dot.radiowaves.left.and.right"
-        }
-    }
 }
 
 /// Cancellation strength. The device reports 0-3 depending on model support.

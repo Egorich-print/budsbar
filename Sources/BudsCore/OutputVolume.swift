@@ -202,6 +202,67 @@ public enum OutputVolume {
         return false
     }
 
+    /// What CoreAudio knows about the output the earbuds play to.
+    ///
+    /// A pair of Bluetooth earbuds shows up as two devices with the same
+    /// name: one carries the microphone and one carries the speakers. The
+    /// one with the output stream is the sink the music goes to.
+    public struct OutputInfo: Equatable, Sendable {
+        /// The name of the device, exactly as CoreAudio spells it.
+        public var name: String?
+        /// The nominal sample rate of its output stream, in hertz.
+        public var sampleRate: Double?
+        /// Whether the device speaks over Bluetooth.
+        public var isBluetooth: Bool
+
+        public init(name: String? = nil, sampleRate: Double? = nil, isBluetooth: Bool = false) {
+            self.name = name
+            self.sampleRate = sampleRate
+            self.isBluetooth = isBluetooth
+        }
+    }
+
+    /// Looks up the audio output that plays to the named device.
+    ///
+    /// - Parameter name: the name of the device, for example
+    ///   `HUAWEI FreeBuds 6`.
+    public static func outputInfo(named name: String?) -> OutputInfo {
+        guard let name, !name.isEmpty else { return OutputInfo() }
+        let wanted = name.lowercased()
+        let matches = allDevices().filter { self.name(of: $0).lowercased() == wanted }
+        guard !matches.isEmpty else { return OutputInfo() }
+
+        var best = OutputInfo(name: name)
+        for device in matches {
+            guard isOutputDevice(device) else { continue }
+            let rate = nominalSampleRate(of: device)
+            // The microphone half of a headset reports a narrow rate; the
+            // half that carries the music is the one worth showing.
+            guard best.sampleRate == nil || (rate ?? 0) > (best.sampleRate ?? 0) else { continue }
+            best = OutputInfo(
+                name: self.name(of: device),
+                sampleRate: rate,
+                isBluetooth: isBluetooth(device)
+            )
+        }
+        return best
+    }
+
+    /// The nominal sample rate of the output stream of a device.
+    public static func nominalSampleRate(of device: AudioObjectID) -> Double? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyNominalSampleRate,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var value: Float64 = 0
+        var size = UInt32(MemoryLayout<Float64>.size)
+        guard AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value) == noErr else {
+            return nil
+        }
+        return value
+    }
+
     /// Converts a decibel value to the linear scalar CoreAudio expects.
     public static func scalar(fromDecibels decibels: Float) -> Float {
         let clamped = min(max(decibels, -96), 0)

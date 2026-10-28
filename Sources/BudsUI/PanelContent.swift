@@ -39,7 +39,7 @@ public struct PanelContent<Model: BudsViewModel>: View {
     // MARK: - Sections
 
     private var batterySection: some View {
-        SectionCard(title: "Battery", systemImage: "battery.100") {
+        SectionCard(title: "Battery", icon: { Image(systemName: "battery.100") }) {
             VStack(spacing: 6) {
                 BatteryPill(
                     label: "L",
@@ -60,7 +60,7 @@ public struct PanelContent<Model: BudsViewModel>: View {
     }
 
     private var noiseSection: some View {
-        SectionCard(title: "Noise Control", systemImage: "ear") {
+        SectionCard(title: "Noise Control", icon: { EarbudIcon(filled: true).frame(width: 11, height: 11) }) {
             VStack(alignment: .leading, spacing: 10) {
                 SegmentedChoice(
                     options: noiseOptions,
@@ -80,8 +80,12 @@ public struct PanelContent<Model: BudsViewModel>: View {
     }
 
     private var soundSection: some View {
-        SectionCard(title: "Sound", systemImage: "waveform") {
+        SectionCard(title: "Sound", icon: { Image(systemName: "waveform") }) {
             VStack(alignment: .leading, spacing: 10) {
+                if !controller.codecInfo.isEmpty {
+                    InfoLine(label: "Codec", value: controller.codecInfo.summary)
+                }
+
                 HStack(spacing: 8) {
                     BandGraph(preset: controller.state.equalizerPreset)
                     ValueMenu(
@@ -122,7 +126,7 @@ public struct PanelContent<Model: BudsViewModel>: View {
     }
 
     private var gestureSection: some View {
-        SectionCard(title: "Gestures", systemImage: "hand.tap") {
+        SectionCard(title: "Gestures", icon: { Image(systemName: "hand.tap") }) {
             VStack(alignment: .leading, spacing: 8) {
                 GestureRow(
                     title: "Double Tap",
@@ -158,7 +162,7 @@ public struct PanelContent<Model: BudsViewModel>: View {
     }
 
     private var deviceSection: some View {
-        SectionCard(title: "Device", systemImage: "info.circle") {
+        SectionCard(title: "Device", icon: { Image(systemName: "info.circle") }) {
             VStack(alignment: .leading, spacing: 3) {
                 InfoLine(label: "Model", value: controller.state.identity.modelCode)
                 InfoLine(label: "Firmware", value: controller.state.identity.firmware)

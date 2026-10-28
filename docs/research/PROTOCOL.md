@@ -160,6 +160,27 @@ earbuds (`kAudioDevicePropertyVolumeScalar`).
 The device-side "sound quality preference" (`0x2BA3`) is a separate setting
 that steers the codec preference between connectivity and quality.
 
+## The codec is not a device feature
+
+The earbuds never report their codec over the control channel. A sweep of the
+surrounding command range (all `0x01xx` and `0x2Bxx` commands, about forty of
+them answered) turned up no codec value, and CoreAudio does not expose one
+either: scanning every property selector of the audio device (456 976
+requests) found only the internal list identifiers.
+
+The negotiation happens between macOS and the Bluetooth controller, and the
+result is written into the system log:
+
+```
+… Bluetoothd: GetControllerInfo: … BtRt 192 Kbps, Codc AAC-LC, … DvNm 'HUAWEI FreeBuds 6' …
+```
+
+On Android the same choice is exposed as a system setting
+(`android.bluetooth.BluetoothCodecConfig`, `SOURCE_CODEC_TYPE_L2HC`), which
+is why the vendor app can offer a codec picker. macOS has no equivalent, so
+on this platform the codec can be **shown but not changed**. See
+`Sources/BudsCore/AudioCodec.swift`.
+
 ## Not implemented
 
 - Custom equalizer curves (the multi-field `0x2B49` payload)

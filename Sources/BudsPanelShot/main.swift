@@ -21,6 +21,14 @@ final class PreviewController: ObservableObject, BudsViewModel {
     @Published var state = DeviceState()
     @Published var linkState: LinkState = .connected
     @Published var lastError: String?
+    /// The stream the system negotiates with the earbuds.
+    @Published var codecInfo = AudioCodecInfo(
+        codec: "AAC-LC",
+        bitrateKbps: 192,
+        sampleRate: 44100,
+        deviceName: "HUAWEI FreeBuds 6",
+        isBluetooth: true
+    )
 
     init(state: DeviceState) {
         self.state = state
@@ -28,6 +36,7 @@ final class PreviewController: ObservableObject, BudsViewModel {
 
     func connect() async {}
     func refresh() async {}
+    func refreshCodec() async {}
     func setNoiseMode(_ mode: NoiseMode, level: Int?) async -> Bool {
         state.noiseMode = mode
         if let level { state.cancellationLevel = level }

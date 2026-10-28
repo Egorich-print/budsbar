@@ -31,24 +31,36 @@ struct MenuBarLabel: View {
     let link: LinkState
 
     var body: some View {
-        if let level = state.battery.lowest {
-            HStack(spacing: 2) {
-                Image(systemName: symbolName)
-                Text("\(level)")
-                    .font(.system(size: 11, weight: .medium))
-                    .monospacedDigit()
+        Group {
+            if let level = state.battery.lowest {
+                HStack(spacing: 2) {
+                    bud
+                    Text("\(level)")
+                        .font(.system(size: 11, weight: .medium))
+                        .monospacedDigit()
+                }
+            } else {
+                bud
             }
-        } else {
-            Image(systemName: symbolName)
         }
+        .accessibilityLabel(accessibilityLabel)
     }
 
-    private var symbolName: String {
+    /// The bud itself: solid while noise cancelling, an outline otherwise.
+    private var bud: some View {
+        EarbudIcon(filled: link == .connected && state.noiseMode == .cancellation)
+            .frame(width: 15, height: 15)
+    }
+
+    private var accessibilityLabel: String {
         switch link {
-        case .connecting: "earbuds"
+        case .connecting:
+            return "BudsBar, connecting"
         case .connected:
-            state.noiseMode?.symbol ?? "earbuds"
-        default: "earbuds"
+            let mode = state.noiseMode == .cancellation ? "noise cancelling" : "noise off"
+            return "BudsBar, \(mode)"
+        default:
+            return "BudsBar"
         }
     }
 }

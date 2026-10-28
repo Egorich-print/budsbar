@@ -104,19 +104,18 @@ struct EarbudGlyph: View {
                 )
                 .frame(width: 56, height: 56)
 
-            Image(systemName: glyphSymbol)
-                .font(.system(size: 21, weight: .medium))
-                .foregroundStyle(glyphColor)
-                .symbolRenderingMode(.hierarchical)
+            EarbudIcon(filled: isFilled, style: glyphColor)
+                .frame(width: 24, height: 24)
+                .accessibilityLabel(accessibilityLabel)
         }
         .frame(width: 56, height: 56)
     }
 
-    private var glyphSymbol: String {
+    /// The bud is solid while it is cancelling, and an outline otherwise.
+    private var isFilled: Bool {
         switch phase {
-        case .offline: "earbuds"
-        case .connecting: "earbuds"
-        case .online: noiseMode?.symbol ?? "earbuds"
+        case .online: noiseMode == .cancellation
+        default: false
         }
     }
 
@@ -129,6 +128,20 @@ struct EarbudGlyph: View {
             case .awareness: .orange
             case .cancellation: .accentColor
             default: .primary
+            }
+        }
+    }
+
+    /// What the glyph says out loud.
+    private var accessibilityLabel: String {
+        switch phase {
+        case .offline: "Earbuds"
+        case .connecting: "Connecting"
+        case .online:
+            switch noiseMode {
+            case .cancellation: "Noise cancelling"
+            case .awareness: "Transparency"
+            default: "Noise off"
             }
         }
     }

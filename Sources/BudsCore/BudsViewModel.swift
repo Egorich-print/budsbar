@@ -16,11 +16,15 @@ public protocol BudsViewModel: ObservableObject {
     var linkState: LinkState { get }
     /// Last error, if any.
     var lastError: String? { get }
+    /// The audio stream the system sends to the earbuds.
+    var codecInfo: AudioCodecInfo { get }
 
     /// Connects to the earbuds.
     func connect() async
     /// Re-reads every value from the earbuds.
     func refresh() async
+    /// Re-reads the codec and the bitrate of the stream to the earbuds.
+    func refreshCodec() async
 
     /// Each setter returns true when the earbuds confirmed the new value.
     @discardableResult

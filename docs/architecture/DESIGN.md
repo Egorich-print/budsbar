@@ -26,6 +26,13 @@ prompting and kills the process with SIGABRT. The app must also be
 launched through LaunchServices (`open`), so the bundle — not the
 terminal — is the process responsible for the privacy grant.
 
+The grant is tied to the signature of the binary, so a locally built app
+asks again with every new build. The request is made on the main thread,
+where the framework waits for the answer — until the prompt is answered,
+the main thread is blocked and the whole panel is frozen. That is macOS
+behaviour rather than a choice of this app, but it is worth knowing when
+the panel does not open: the Bluetooth prompt is waiting somewhere.
+
 ## Motion design
 
 All artwork and animation in this project is original. The design borrows
@@ -52,6 +59,62 @@ Guidelines followed:
   repeating it is a UX smell. The panel shows the value, and the arc
   is a readout rather than a celebration.
 - **Alerts are static.** A low battery is a colour, not a motion.
+
+## The earbud
+
+The app has no artwork of its own from Apple, so the earbud in the menu bar,
+in the panel header and in the section titles is drawn here as a single
+`Path` (`Sources/BudsUI/EarbudIcon.swift`).
+
+The system symbol for "ear" was rejected: it says *ear*, not *earbuds*, and
+an ear next to a battery percentage looks like a mistake. The same shape is
+used in all three places, so the app speaks with one voice.
+
+The silhouette had to survive a 15-point menu bar, where a shape has to be
+recognised from its outline alone. Three versions were rendered and
+rejected before the current one:
+
+| Version | Read as |
+|---|---|
+| Round head on a thin stalk | A mushroom |
+| Wide body with a diagonal nozzle | A magnifying glass |
+| Symmetric head tapering into a stem | A light bulb |
+
+What works is the silhouette everybody knows: a head that is slightly
+taller than it is wide, and a straight stem that hangs off it at an angle.
+The state is drawn as a solid bud when noise cancelling is on and as an
+outline otherwise.
+
+## The codec line
+
+The earbuds do not report their codec — macOS negotiates it with the
+Bluetooth controller and keeps the result to itself. The system does write
+the outcome into its log, though, and that is where the numbers come from.
+
+The daemon only writes the line when something asks it for the controller
+information. `system_profiler SPBluetoothDataType` does exactly that, and
+it is cheap: it answers in a tenth of a second. The line is then read back
+with `log show --last 20s`, which takes about half a second. The sample
+rate comes from CoreAudio instead, because it describes the stream macOS
+actually plays.
+
+```
+… Bluetoothd: GetControllerInfo: … BtRt 192 Kbps, Codc AAC-LC, … DvNm 'HUAWEI FreeBuds 6' …
+```
+
+The daemon writes one line per device, so the line of the earbuds is picked
+out by its device name, and the newest such line is the one that describes
+the stream that is running now.
+
+The whole read happens in a detached task, and the panel shows the value it
+already has until the new one arrives. When the codec cannot be read at
+all, the line falls back to the Bluetooth profile and the sample rate, so
+it always says something true.
+
+The codec is **read-only**: on macOS the operating system decides which
+codec is used, and there is no API to change it. The earbuds' own *sound
+quality* setting is a separate, writable preference, and the panel shows
+both so they are not confused.
 
 ## Hand-drawn controls
 

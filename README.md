@@ -18,6 +18,7 @@ switch noise control, sound presets, and touch gestures from the menu bar.
 |---|---|
 | **Battery** | Left earbud, right earbud and case, with charging indicators |
 | **Noise control** | Off / Noise cancelling / Awareness — only the modes the model really offers |
+| **Codec** | The codec and bitrate macOS negotiated with the earbuds, plus the sample rate |
 | **Sound** | Equalizer preset, low-latency mode, sound-quality preference |
 | **Volume** | Output volume for the earbuds, driven through the macOS audio stack |
 | **Gestures** | Double tap, triple tap and hold — separately per earbud |
@@ -30,6 +31,21 @@ change is refused, the panel says so instead of failing silently.
 | Connected | Noise cancelling |
 |---|---|
 | ![Connected](docs/images/panel-connected.png) | ![Cancelling](docs/images/panel-cancelling.png) |
+
+### The codec line
+
+The earbuds never report their codec — macOS negotiates it with the Bluetooth
+controller and keeps the result to itself. The system does write the outcome
+into its log, so BudsBar asks the system for the controller information
+(`system_profiler`, which answers in a tenth of a second) and reads the line
+back. The sample rate comes from CoreAudio, which describes the stream macOS
+actually plays.
+
+The result looks like `AAC-LC · 192 kbps · 44.1 kHz`.
+
+The codec is read-only on macOS: which codec is used is a decision of the
+operating system, not of the earbuds. The **Sound quality** control below it
+is the earbuds' own preference and does change what they do.
 
 ## Requirements
 
@@ -50,6 +66,10 @@ cd budsbar
 
 `install.sh` copies the app to `/Applications` and launches it. The first
 launch asks for Bluetooth permission.
+
+> macOS ties that permission to the signature of the binary. Every new build
+> is a new signature, so a locally built app asks again — approve the prompt
+> and the panel connects.
 
 ### Homebrew
 
@@ -90,11 +110,13 @@ BudsBar.app
 │   ├── Commands.swift      →  command catalogue
 │   ├── RFCommLink.swift    →  Bluetooth RFCOMM transport
 │   ├── DeviceController.swift →  state machine, read-back verification
+│   ├── AudioCodec.swift    →  codec and bitrate from the system log
 │   └── OutputVolume.swift  →  CoreAudio output volume
 ├── BudsUI
 │   ├── ControlPanel.swift  →  panel shell and header
 │   ├── PanelContent.swift  →  the control sections
 │   ├── Controls.swift      →  hand-drawn segmented controls, menus, switch
+│   ├── EarbudIcon.swift    →  the app's own earbud, drawn as a path
 │   └── Motion.swift        →  the original motion design
 └── BudsProbe               →  headless diagnostic
 ```
