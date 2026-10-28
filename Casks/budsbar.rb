@@ -1,6 +1,6 @@
 cask "budsbar" do
-  version "0.1.3"
-  sha256 "84c250563fec06c29ba99818df3d356f04e0819815815cffce82c007f624b878"
+  version "0.1.4"
+  sha256 "fb4d4b8ffaef3a4165854a2b3ead99b954f8daa415f094a567f6f594b7183bda"
 
   url "https://github.com/Egorich-print/budsbar/releases/download/v#{version}/BudsBar-macOS.tar.gz"
   name "BudsBar"
