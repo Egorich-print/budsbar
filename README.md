@@ -11,6 +11,20 @@ switch noise control, sound presets, and touch gestures from the menu bar.
 The compact menu-bar panel uses native macOS pickers, switches, sliders and
 grouped controls, following the system appearance in light and dark mode.
 
+## Screenshots
+
+HUAWEI FreeBuds Pro 5 connected on macOS 27.2, with the custom menu-bar
+monogram, native controls and expanded device information:
+
+<img src="docs/images/panel-pro5-macos27.png" alt="BudsBar connected to FreeBuds Pro 5 on macOS 27.2" width="400">
+
+The menu-bar monogram is a transparent template image. macOS supplies its
+foreground color for the current appearance.
+
+<img src="Sources/BudsBar/Resources/MenuBarMonogram.png" alt="Transparent menu-bar monogram" width="64" height="64">
+
+[Download the transparent icon](Sources/BudsBar/Resources/MenuBarMonogram.png)
+
 ---
 
 ## What it does
@@ -18,7 +32,7 @@ grouped controls, following the system appearance in light and dark mode.
 | Feature | Notes |
 |---|---|
 | **Battery** | Left earbud, right earbud and case, with charging indicators |
-| **Noise control** | Off / Noise cancelling / Awareness — only the modes the model really offers |
+| **Noise control** | Off and Noise cancelling validated on Pro 5; Awareness depends on the model |
 | **Codec** | The codec and bitrate macOS negotiated with the earbuds, plus the sample rate |
 | **Sound** | Equalizer preset, low-latency mode, sound-quality preference |
 | **Volume** | Output volume for the earbuds, driven through the macOS audio stack |
@@ -55,7 +69,7 @@ is the earbuds' own preference and does change what they do.
 ### From source
 
 ```sh
-git clone https://github.com/Egorich-print/budsbar.git
+git clone git@github.com:felipecastro009/budsbar.git
 cd budsbar
 ./scripts/build-app.sh
 ./scripts/install.sh
@@ -68,11 +82,20 @@ launch asks for Bluetooth permission.
 > is a new signature, so a locally built app asks again — approve the prompt
 > and the panel connects.
 
-### Homebrew
+### Launch or restart the local build
 
 ```sh
-brew install --cask budsbar
+open build/BudsBar.app
 ```
+
+A monogram appears in the macOS menu bar. Click it to open the panel; the app
+has no Dock icon or standalone main window. Without a connection, the panel
+shows an empty state and hides device readings and controls. If an older
+instance is already running, quit BudsBar from its options menu before
+opening the new build.
+
+Homebrew instructions from upstream install the upstream release, not this
+fork. Build from source for the changes documented here.
 
 ## Build from source
 
@@ -102,7 +125,19 @@ meantime; a successful cross-build alone does not verify the tests.
 Read-only diagnostics succeeded on FreeBuds Pro 5 (model `BTFT0023`) with
 HarmonyOS `7.0.0.350(F003H003C91)` on macOS 27.2. The probe received identity,
 battery, noise mode, equalizer options, latency, sound quality, wear detection,
-dual connection and gesture settings. Changing settings remains unverified.
+dual connection and gesture settings. The write diagnostic also changed,
+read back and restored all five settings below:
+
+1. Noise mode: cancellation → off → cancellation.
+2. Equalizer: preset 16 → preset 2 → preset 16.
+3. Low latency: false → true → false.
+4. Sound preference: connectivity → quality → connectivity.
+5. Right double tap: play/pause → previous track → play/pause.
+
+These checks validate protocol read-back and restoration. Audio stability,
+automatic switching between devices and coexistence with the Huawei app
+remain under investigation. The local suite passed 29 tests with Xcode 27.2.
+
 Equalizer and gesture identifiers without confirmed names retain numeric labels.
 The reported noise `level` is not proof of cancellation strength.
 To check compatibility, pair and connect the earbuds to the Mac, then run the
@@ -183,9 +218,10 @@ magic byte to the end of the body and is verified on every received frame.
 
 Originally verified on **HUAWEI FreeBuds 6** (model `BTFT0020`, firmware
 `HarmonyOS 6.1.0.358`, macOS 26.x, Apple Silicon).
-This fork now requires macOS 27.2+. Read-only diagnostics are also verified
-on **HUAWEI FreeBuds Pro 5** (`BTFT0023`), as described above; settings writes
-on that model remain unverified.
+This fork now requires macOS 27.2+. **HUAWEI FreeBuds Pro 5** (`BTFT0023`)
+with HarmonyOS `7.0.0.350(F003H003C91)` passed read diagnostics and five
+write/read-back/restore checks, as detailed above. This does not establish
+support for every feature or firmware version.
 
 The protocol is shared across the FreeBuds line and the app is written to
 adapt to what the device reports — equalizer presets and gesture actions are
@@ -203,8 +239,8 @@ rest unknown.
 ```
 Sources/
 ├── BudsCore/       protocol, transport, state model
-├── BudsUI/         SwiftUI panel, controls and motion design
-├── BudsBar/        the menu-bar app
+├── BudsUI/         native SwiftUI panel and controls
+├── BudsBar/        the menu-bar app and bundled PNG icon
 ├── BudsProbe/      headless diagnostic
 └── BudsPanelShot/  renders the panel to PNG for the docs
 Tests/              protocol unit tests
@@ -216,8 +252,8 @@ docs/               protocol notes, motion notes, design notes
 ## Legal
 
 BudsBar is an independent project. It is **not affiliated with, endorsed by,
-or sponsored by Huawei or Honor**. All artwork and motion in this project are
-original. The protocol details are interoperability information; the
-implementation is original code.
+or sponsored by Huawei or Honor**. This fork is based on
+[Egorich-print/budsbar](https://github.com/Egorich-print/budsbar). The protocol
+details are interoperability information; the implementation is original code.
 
 Released under the [MIT License](LICENSE).
