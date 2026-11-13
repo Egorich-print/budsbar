@@ -59,11 +59,12 @@ components: [Adopting Liquid Glass](https://developer.apple.com/documentation/te
 
 ## Menu bar symbol
 
-The menu bar uses a custom pair of mirrored TWS earbuds, drawn into a
-resolution-independent `NSImage` in `Sources/BudsBar/MenuBarIcon.swift`.
-The image is 22 × 18 points and has `isTemplate` enabled so macOS supplies
-the foreground color for light and dark menu bars. `MenuBarExtra` receives
-an actual `Image(nsImage:)`, rather than a custom SwiftUI shape as its label.
+The menu bar uses the transparent PNG monogram chosen from Felipe's reference,
+stored in `Sources/BudsBar/Resources/MenuBarMonogram.png`. Swift Package Manager
+packages it as a resource bundle, which `build-app.sh` copies into the app.
+`MenuBarIcon` loads the PNG with `Bundle.module`, sizes it to 22 × 22 points,
+and enables `isTemplate` so macOS supplies the foreground color in light and
+dark appearances. `MenuBarExtra` receives an actual `Image(nsImage:)`.
 Battery levels remain inside the panel. The panel uses SF Symbols for its
 header and section labels.
 

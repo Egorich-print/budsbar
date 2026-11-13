@@ -27,6 +27,7 @@ let package = Package(
         .executableTarget(
             name: "BudsBar",
             dependencies: ["BudsCore", "BudsUI"],
+            resources: [.copy("Resources/MenuBarMonogram.png")],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         // Headless diagnostic that exercises the same protocol code the app uses.
