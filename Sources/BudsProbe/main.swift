@@ -74,32 +74,44 @@ struct BudsProbe {
         if wantsWrite {
             print("")
             print("write round trip")
-            let originalMode = state.noiseMode ?? .off
-            let target: NoiseMode = originalMode == .cancellation ? .awareness : .cancellation
-            print("  set noise mode → \(target.title)")
-            let okMode = await controller.setNoiseMode(target)
-            print("    applied    → \(okMode ? "yes" : "NO")")
-            print("    read back   → \(controller.state.noiseMode?.title ?? "—")")
-            await controller.setNoiseMode(originalMode)
-            print("  restored     → \(controller.state.noiseMode?.title ?? "—")")
+            var validatedFeatures = 0
+            if let originalMode = state.noiseMode {
+                let target: NoiseMode = originalMode == .off ? .cancellation : .off
+                print("  set noise mode → \(target.title)")
+                let okMode = await controller.setNoiseMode(target)
+                print("    applied    → \(okMode ? "yes" : "NO")")
+                print("    read back   → \(controller.state.noiseMode?.title ?? "—")")
+                let restoredMode = await controller.setNoiseMode(originalMode)
+                verifyRoundTrip("noise mode", applied: okMode,
+                    restored: restoredMode && controller.state.noiseMode == originalMode)
+                validatedFeatures += 1
+                print("  restored     → \(controller.state.noiseMode?.title ?? "—")")
+            }
 
-            if let preset = state.equalizerPreset {
-                let other = state.availableEqualizerPresets.first { $0 != preset } ?? preset
+            if let preset = state.equalizerPreset,
+               let other = state.availableEqualizerPresets.first(where: { $0 != preset }) {
                 print("  set equalizer → \(EqualizerPreset.title(for: other))")
                 let okEq = await controller.setEqualizer(other)
                 print("    applied    → \(okEq ? "yes" : "NO")")
                 print("    read back   → \(controller.state.equalizerPreset.map { EqualizerPreset.title(for: $0) } ?? "—")")
-                await controller.setEqualizer(preset)
+                let restoredEq = await controller.setEqualizer(preset)
+                verifyRoundTrip("equalizer", applied: okEq,
+                    restored: restoredEq && controller.state.equalizerPreset == preset)
+                validatedFeatures += 1
                 print("  restored     → \(controller.state.equalizerPreset.map { EqualizerPreset.title(for: $0) } ?? "—")")
             }
 
-            let latency = state.lowLatencyEnabled ?? false
-            print("  set low latency → \((!latency))")
-            let okLat = await controller.setLowLatency(!latency)
-            print("    applied    → \(okLat ? "yes" : "NO")")
-            print("    read back   → \(controller.state.lowLatencyEnabled.map(String.init) ?? "—")")
-            await controller.setLowLatency(latency)
-            print("  restored     → \(controller.state.lowLatencyEnabled.map(String.init) ?? "—")")
+            if let latency = state.lowLatencyEnabled {
+                print("  set low latency → \((!latency))")
+                let okLat = await controller.setLowLatency(!latency)
+                print("    applied    → \(okLat ? "yes" : "NO")")
+                print("    read back   → \(controller.state.lowLatencyEnabled.map(String.init) ?? "—")")
+                let restoredLat = await controller.setLowLatency(latency)
+                verifyRoundTrip("low latency", applied: okLat,
+                    restored: restoredLat && controller.state.lowLatencyEnabled == latency)
+                validatedFeatures += 1
+                print("  restored     → \(controller.state.lowLatencyEnabled.map(String.init) ?? "—")")
+            }
 
             if let quality = state.soundQuality {
                 let other: SoundQuality = quality == .quality ? .connectivity : .quality
@@ -107,19 +119,30 @@ struct BudsProbe {
                 let okQual = await controller.setSoundQuality(other)
                 print("    applied    → \(okQual ? "yes" : "NO")")
                 print("    read back   → \(controller.state.soundQuality?.title ?? "—")")
-                await controller.setSoundQuality(quality)
+                let restoredQual = await controller.setSoundQuality(quality)
+                verifyRoundTrip("sound quality", applied: okQual,
+                    restored: restoredQual && controller.state.soundQuality == quality)
+                validatedFeatures += 1
                 print("  restored     → \(controller.state.soundQuality?.title ?? "—")")
             }
 
-            if let current = state.gestures.doubleTapRight {
-                let other = state.gestures.availableTapActions.first { $0 != current } ?? current
+            if let current = state.gestures.doubleTapRight,
+               let other = state.gestures.availableTapActions.first(where: { $0 != current }) {
                 print("  set right double tap → \(GestureAction.title(for: other))")
                 let okTap = await controller.setDoubleTap(side: .right, action: other)
                 print("    applied    → \(okTap ? "yes" : "NO")")
                 print("    read back   → \(controller.state.gestures.doubleTapRight.map { GestureAction.title(for: $0) } ?? "—")")
-                await controller.setDoubleTap(side: .right, action: current)
+                let restoredTap = await controller.setDoubleTap(side: .right, action: current)
+                verifyRoundTrip("right double tap", applied: okTap,
+                    restored: restoredTap && controller.state.gestures.doubleTapRight == current)
+                validatedFeatures += 1
                 print("  restored     → \(controller.state.gestures.doubleTapRight.map { GestureAction.title(for: $0) } ?? "—")")
             }
+            guard validatedFeatures > 0 else {
+                print("VALIDATION FAILED: no readable settings with alternate values")
+                exit(2)
+            }
+            print("VALIDATION PASSED: \(validatedFeatures) settings changed and restored")
         }
 
         // A one-off override, used to put a value back after an experiment.
@@ -166,4 +189,16 @@ struct BudsProbe {
         print("done")
         exit(0)
     }
+
+    static func verifyRoundTrip(_ feature: String, applied: Bool, restored: Bool) {
+        guard restored else {
+            print("VALIDATION FAILED: could not confirm restoration of \(feature); check the vendor app before continuing")
+            exit(2)
+        }
+        guard applied else {
+            print("VALIDATION FAILED: \(feature) change was not confirmed; original value restored")
+            exit(2)
+        }
+    }
+
 }

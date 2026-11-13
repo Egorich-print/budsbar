@@ -137,6 +137,21 @@ swift run BudsProbe            # read everything
 swift run BudsProbe --write    # also round-trip one write per feature
 ```
 
+To validate setting changes using the app bundle:
+
+```sh
+./scripts/build-probe.sh
+open -W --stdout /tmp/budsprobe-write.log --stderr /tmp/budsprobe-write.log build/BudsProbe.app --args --write
+cat /tmp/budsprobe-write.log
+```
+
+The probe changes and restores noise mode, equalizer, low latency, sound
+quality preference and the right double-tap action, when readable values
+and alternate options are available. It stops with `VALIDATION FAILED` and
+exit code 2 if a change or restoration cannot be confirmed. A successful
+run prints `VALIDATION PASSED` with the number of settings checked. The
+launcher exiting successfully alone does not establish validation success.
+
 ## How it works
 
 ```
