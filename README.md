@@ -114,6 +114,10 @@ battery and feature values; unknown values do not establish support.
 The diagnostic also prints device serial numbers, so redact them before
 sharing output. A successful protocol test suite does not verify a device.
 
+The probe embeds its own Bluetooth usage description. Allow Bluetooth access
+when macOS requests it. If access was denied, check System Settings > Privacy
+& Security > Bluetooth for the probe or the terminal used to launch it.
+
 A headless probe that exercises the same protocol code as the app:
 
 ```sh

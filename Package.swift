@@ -1,5 +1,10 @@
 // swift-tools-version: 6.0
 import PackageDescription
+import Foundation
+
+let probeInfoPlist = URL(fileURLWithPath: #filePath)
+    .deletingLastPathComponent()
+    .appendingPathComponent("Resources/BudsProbe-Info.plist").path
 
 let package = Package(
     name: "BudsBar",
@@ -28,7 +33,14 @@ let package = Package(
         .executableTarget(
             name: "BudsProbe",
             dependencies: ["BudsCore"],
-            swiftSettings: [.swiftLanguageMode(.v6)]
+            swiftSettings: [.swiftLanguageMode(.v6)],
+            // A standalone executable needs its own Bluetooth usage description.
+            linkerSettings: [.unsafeFlags([
+                "-Xlinker", "-sectcreate",
+                "-Xlinker", "__TEXT",
+                "-Xlinker", "__info_plist",
+                "-Xlinker", probeInfoPlist
+            ])]
         ),
         // Renders the control panel to PNG for documentation and review.
         .executableTarget(
