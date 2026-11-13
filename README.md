@@ -91,7 +91,28 @@ swift test                      # run the protocol tests
 > newer SDKs turn SwiftUI's `@State` into a macro whose implementation plugin
 > ships only with the full Xcode. Override with `BUDSBAR_SDK=/path/to/SDK`.
 
+For tests with standalone Command Line Tools, use `./scripts/test.sh`.
+It selects the installed macOS 26.5 SDK when available (or `BUDSBAR_SDK`)
+and supplies the paths to the installed Swift Testing framework and macro
+plugin. With full Xcode selected, it uses the default build engine.
+Extra `swift test` arguments can be passed to the script.
+
 ## Diagnostics
+
+FreeBuds Pro 5 with HarmonyOS 7.0.0.350 is not yet verified. Its Bluetooth
+name `HUAWEI FreeBuds pro 5` already matches device discovery. To check
+compatibility, pair and connect the earbuds to the Mac, then run the
+read-only diagnostic from Terminal:
+
+```sh
+swift run --sdk /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk BudsProbe
+```
+
+Use an installed SDK path if it differs. Run without `--write` or `--set`
+to avoid changing earbud settings. Check the reported model code, firmware,
+battery and feature values; unknown values do not establish support.
+The diagnostic also prints device serial numbers, so redact them before
+sharing output. A successful protocol test suite does not verify a device.
 
 A headless probe that exercises the same protocol code as the app:
 
