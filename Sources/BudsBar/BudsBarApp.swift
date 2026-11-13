@@ -11,13 +11,16 @@ struct BudsBarApp: App {
     @State private var didConnect = false
 
     var body: some Scene {
-        MenuBarExtra("BudsBar", systemImage: "earbuds") {
+        MenuBarExtra {
             ControlPanel(controller: controller)
                 .onAppear {
                     guard !didConnect else { return }
                     didConnect = true
                     Task { await controller.connect() }
                 }
+        } label: {
+            Image(nsImage: MenuBarIcon.image)
+                .accessibilityLabel("BudsBar")
         }
         .menuBarExtraStyle(.window)
     }

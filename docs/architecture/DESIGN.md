@@ -59,10 +59,13 @@ components: [Adopting Liquid Glass](https://developer.apple.com/documentation/te
 
 ## Menu bar symbol
 
-The menu bar uses `MenuBarExtra("BudsBar", systemImage: "earbuds")`
-so the system renders a persistent TWS-earbud symbol directly. Battery levels
-remain inside the panel. The panel uses SF Symbols for its header and
-section labels as well.
+The menu bar uses a custom pair of mirrored TWS earbuds, drawn into a
+resolution-independent `NSImage` in `Sources/BudsBar/MenuBarIcon.swift`.
+The image is 22 × 18 points and has `isTemplate` enabled so macOS supplies
+the foreground color for light and dark menu bars. `MenuBarExtra` receives
+an actual `Image(nsImage:)`, rather than a custom SwiftUI shape as its label.
+Battery levels remain inside the panel. The panel uses SF Symbols for its
+header and section labels.
 
 The original earbud illustration remains available in the library, but is
 not used as the menu bar label.
