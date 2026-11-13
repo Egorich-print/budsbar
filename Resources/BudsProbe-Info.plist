@@ -2,10 +2,20 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleExecutable</key>
+	<string>BudsProbe</string>
 	<key>CFBundleIdentifier</key>
 	<string>dev.budsbar.BudsProbe</string>
 	<key>CFBundleName</key>
 	<string>BudsProbe</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>27.2</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>BudsProbe connects to your Bluetooth earbuds to read diagnostic information and, when explicitly requested, test settings.</string>
 </dict>

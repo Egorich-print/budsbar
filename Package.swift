@@ -8,7 +8,7 @@ let probeInfoPlist = URL(fileURLWithPath: #filePath)
 
 let package = Package(
     name: "BudsBar",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS("27.2")],
     products: [
         .executable(name: "BudsBar", targets: ["BudsBar"]),
         .library(name: "BudsCore", targets: ["BudsCore"]),

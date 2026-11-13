@@ -15,28 +15,10 @@ BUILD_DIR="$ROOT/build"
 APP="$BUILD_DIR/$APP_NAME.app"
 CONFIG="${CONFIG:-release}"
 
-# The SDK to build against.
-#
-# `BUDSBAR_SDK` wins. Otherwise a locally installed 26.5 SDK is preferred:
-# newer SDKs turn SwiftUI's `@State` into a macro whose implementation plugin
-# ships only with the full Xcode, and the Command Line Tools cannot expand it.
-# When neither is available the toolchain default is used.
-DEFAULT_SDK="/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
-if [[ -n "${BUDSBAR_SDK:-}" ]]; then
-	SDK="$BUDSBAR_SDK"
-elif [[ -d "$DEFAULT_SDK" ]]; then
-	SDK="$DEFAULT_SDK"
-else
-	SDK=""
-fi
-
-SDK_ARGS=()
-if [[ -n "$SDK" ]]; then
-	SDK_ARGS=(--sdk "$SDK")
-	echo "==> SDK: $SDK"
-else
-	echo "==> SDK: toolchain default"
-fi
+# Build with the macOS 27.2 SDK from the selected toolchain.
+SDK="${BUDSBAR_SDK:-$(xcrun --sdk macosx27.2 --show-sdk-path)}"
+SDK_ARGS=(--sdk "$SDK")
+echo "==> SDK: $SDK"
 
 # The `${arr[@]+...}` form keeps `set -u` happy when the array is empty —
 # plain "${arr[@]}" is an unbound-variable error in bash 3.2.

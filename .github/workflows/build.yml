@@ -7,37 +7,38 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  DEVELOPER_DIR: /Applications/Xcode_27.2.app/Contents/Developer
+
 jobs:
   test:
-    name: Test (macOS ${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-14, macos-15]
+    name: Build and test (macOS 27.2+)
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode
+      - name: Check toolchain
         run: |
-          set -euo pipefail
-          latest="$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)"
-          if [ -n "$latest" ]; then
-            echo "Using $latest"
-            sudo xcode-select -s "$latest"
-          fi
           xcodebuild -version
+          xcrun --sdk macosx27.2 --show-sdk-version
           swift --version
 
       - name: Build
         run: swift build -c release
 
       - name: Test
-        run: swift test
+        run: |
+          python3 - <<'PY'
+          import platform
+          version = tuple(map(int, platform.mac_ver()[0].split('.')[:2]))
+          if version < (27, 2):
+              raise SystemExit('Tests require a macOS 27.2+ runner; the hosted image is still older.')
+          PY
+          ./scripts/test.sh
 
   bundle:
     name: Assemble app bundle
-    runs-on: macos-15
+    runs-on: xcode-27
     needs: test
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +62,7 @@ jobs:
     name: Publish release
     needs: bundle
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: macos-15
+    runs-on: xcode-27
     permissions:
       contents: write
     steps:
