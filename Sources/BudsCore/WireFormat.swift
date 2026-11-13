@@ -63,10 +63,10 @@ public struct Frame: Equatable, Sendable {
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    /// All field values for a tag interpreted as a list of signed bytes.
+    /// Option identifiers as unsigned bytes, including 255 for disabled gestures.
     public func byteList(_ tag: UInt8) -> [Int]? {
         guard let value = fields[tag], !value.isEmpty else { return nil }
-        return value.map { Int(Int8(bitPattern: $0)) }
+        return value.map(Int.init)
     }
 }
 

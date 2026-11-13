@@ -48,6 +48,7 @@ public struct DeviceIdentity: Equatable, Sendable {
     /// field rotates between reads and cannot be shown as a title.
     public var displayName: String {
         switch modelCode {
+        case "BTFT0023": "HUAWEI FreeBuds Pro 5"
         case "BTFT0020": "HUAWEI FreeBuds 6"
         case "BTFT0022": "HUAWEI FreeBuds 6i"
         case "BTFT0021": "HUAWEI FreeBuds 5i"

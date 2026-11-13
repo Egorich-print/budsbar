@@ -102,9 +102,13 @@ meantime; a successful cross-build alone does not verify the tests.
 
 ## Diagnostics
 
-FreeBuds Pro 5 with HarmonyOS 7.0.0.350 is not yet verified. Its Bluetooth
-name `HUAWEI FreeBuds pro 5` already matches device discovery. To check
-compatibility, pair and connect the earbuds to the Mac, then run the
+Read-only diagnostics succeeded on FreeBuds Pro 5 (model `BTFT0023`) with
+HarmonyOS `7.0.0.350(F003H003C91)` on macOS 27.2. The probe received identity,
+battery, noise mode, equalizer options, latency, sound quality, wear detection,
+dual connection and gesture settings. Changing settings remains unverified.
+Equalizer and gesture identifiers without confirmed names retain numeric labels.
+The reported noise `level` is not proof of cancellation strength.
+To check compatibility, pair and connect the earbuds to the Mac, then run the
 read-only diagnostic as an app from Terminal:
 
 ```sh
@@ -166,8 +170,11 @@ magic byte to the end of the body and is verified on every received frame.
 
 ## Supported devices
 
-Verified on **HUAWEI FreeBuds 6** (model `BTFT0020`, firmware
+Originally verified on **HUAWEI FreeBuds 6** (model `BTFT0020`, firmware
 `HarmonyOS 6.1.0.358`, macOS 26.x, Apple Silicon).
+This fork now requires macOS 27.2+. Read-only diagnostics are also verified
+on **HUAWEI FreeBuds Pro 5** (`BTFT0023`), as described above; settings writes
+on that model remain unverified.
 
 The protocol is shared across the FreeBuds line and the app is written to
 adapt to what the device reports — equalizer presets and gesture actions are
