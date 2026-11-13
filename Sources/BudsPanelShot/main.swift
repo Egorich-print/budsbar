@@ -26,7 +26,7 @@ final class PreviewController: ObservableObject, BudsViewModel {
         codec: "AAC-LC",
         bitrateKbps: 192,
         sampleRate: 44100,
-        deviceName: "HUAWEI FreeBuds 6",
+        deviceName: "HUAWEI FreeBuds Pro 5",
         isBluetooth: true
     )
 
@@ -63,13 +63,12 @@ final class PreviewController: ObservableObject, BudsViewModel {
 @MainActor
 func makeState(_ variant: String) -> DeviceState {
     var state = DeviceState()
-    state.identity.modelCode = "BTFT0020"
-    state.identity.modelCode = "BTFT0020"
-    state.identity.firmware = "HarmonyOS 6.1.0.358(F003H003C90)"
-    state.identity.serialNumber = "3EDBB25621102105"
+    state.identity.modelCode = "BTFT0023"
+    state.identity.firmware = "HarmonyOS 7.0.0.350(F003H003C91)"
+    state.identity.serialNumber = "PREVIEW-DEVICE"
     state.battery = BatteryReading(left: 92, right: 88, caseLevel: 74)
     state.isChargingRight = true
-    state.availableEqualizerPresets = [0, 2, 3, 9, 11, 12]
+    state.availableEqualizerPresets = [2, 5, 9, 13, 14, 15, 16, 17, 18, 19]
 
     switch variant {
     case "offline":
@@ -93,11 +92,9 @@ func makeState(_ variant: String) -> DeviceState {
             availableHoldActions: [0, 10, 18, 19, 255]
         )
     default:
-        // The FreeBuds 6 has no transparency mode, so the preview shows the
-        // model without it.
         state.noiseMode = .off
         state.cancellationLevel = 0
-        state.equalizerPreset = 0
+        state.equalizerPreset = 16
         state.lowLatencyEnabled = false
         state.soundQuality = .connectivity
         state.autoPauseEnabled = true
@@ -122,24 +119,15 @@ func render(variant: String, to path: String) {
     let controller = PreviewController(state: makeState(stateVariant))
     if variant == "connecting" {
         controller.linkState = .connecting
+    } else if variant == "offline" {
+        controller.linkState = .idle
+    } else if variant == "error" {
+        controller.linkState = .failed("The earbuds are not connected. Connect them and try again.")
     }
-    // Freeze the connect animation on a chosen phase, so the captured frame
-    // is the same every time and shows the gesture in a readable state.
-    // The value has to be set on a view *above* the panel, because the panel
-    // reads the environment in its own body.
-    let frozen = Date(timeIntervalSinceReferenceDate: 1.4)
-    let content = Group {
-        ControlPanel(controller: controller, scrollable: scrollable)
-            .frame(width: 320)
-    }
-    .environment(\.budsFrozenAnimationDate, variant == "connecting" ? frozen : nil)
-
-    // Render through a real hosting view in an offscreen window rather than
-    // `ImageRenderer`: the latter does not resolve SF Symbols, and AppKit
-    // backed controls only lay out once they are in a window.
-    let hosting = NSHostingView(rootView: content)
+    let panel = ControlPanel(controller: controller, scrollable: scrollable)
+    let hosting = NSHostingView(rootView: panel)
     let window = NSWindow(
-        contentRect: NSRect(x: 0, y: 0, width: 320, height: 800),
+        contentRect: NSRect(x: 0, y: 0, width: 360, height: 800),
         styleMask: [.titled],
         backing: .buffered,
         defer: false
@@ -154,8 +142,8 @@ func render(variant: String, to path: String) {
     // so the scrolling layout can be reviewed the way the app shows it.
     if scrollable {
         let height: CGFloat = 601
-        hosting.frame = NSRect(x: 0, y: 0, width: 320, height: height)
-        window.setContentSize(NSSize(width: 320, height: height))
+        hosting.frame = NSRect(x: 0, y: 0, width: 360, height: height)
+        window.setContentSize(NSSize(width: 360, height: height))
         hosting.layoutSubtreeIfNeeded()
         RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.4))
         hosting.layoutSubtreeIfNeeded()
@@ -165,7 +153,7 @@ func render(variant: String, to path: String) {
             exit(1)
         }
         try? png.write(to: URL(fileURLWithPath: path))
-        print("wrote \(path) (\(png.count) bytes, 320x\(Int(height)))")
+        print("wrote \(path) (\(png.count) bytes, 360x\(Int(height)))")
         return
     }
 
@@ -189,10 +177,9 @@ func render(variant: String, to path: String) {
 
 /// Capture the view hierarchy into a PNG.
 ///
-/// The panel is drawn with SwiftUI primitives, so a layer-tree capture
-/// (`cacheDisplay`) records everything: text, symbols, gradients and the
-/// hand-drawn controls. The bitmap is created at twice the logical size so
-/// the image stays crisp in a README.
+/// The bitmap is created at twice the logical size. AppKit-backed native
+/// controls can be incomplete in an offscreen capture; verify the running
+/// panel before treating this image as evidence of the final appearance.
 ///
 /// A vector capture is kept as a fallback: it records AppKit-backed controls
 /// that SwiftUI does not draw itself, but it leaves out SwiftUI content.
@@ -281,12 +268,14 @@ private func scaleFactor(width: Int, box: CGFloat) -> CGFloat {
 let arguments = CommandLine.arguments
 let output = arguments.count > 1 ? arguments[1] : "panel.png"
 let variant = arguments.count > 2 ? arguments[2] : "connected"
+let appearance = arguments.count > 3 ? arguments[3] : "light"
 
 MainActor.assumeIsolated {
     // SF Symbols resolve through the system symbol font, which needs a real
     // application context and at least one turn of the run loop.
     let app = NSApplication.shared
     app.setActivationPolicy(.accessory)
+    app.appearance = NSAppearance(named: appearance == "dark" ? .darkAqua : .aqua)
     app.finishLaunching()
 
     let deadline = Date().addingTimeInterval(1.0)

@@ -2,7 +2,7 @@
 
 ## Surface
 
-`MenuBarExtra` with the `.window` style, minimum macOS 14.
+`MenuBarExtra` with the `.window` style, minimum macOS 27.2.
 
 Why this and not the alternatives:
 
@@ -33,57 +33,34 @@ the main thread is blocked and the whole panel is frozen. That is macOS
 behaviour rather than a choice of this app, but it is worth knowing when
 the panel does not open: the Bluetooth prompt is waiting somewhere.
 
-## Motion design
+## Native macOS direction
 
-All artwork and animation in this project is original. The design borrows
-the general motion vocabulary of modern Bluetooth device interfaces —
-expanding rings, inward wave collapse, band morphs — and implements it
-from scratch with SwiftUI `Canvas` and shape primitives.
+The panel stays in the menu bar, following the compact interaction model of
+Control Center. Native SwiftUI pickers, switches, sliders, progress indicators
+and group boxes own their appearance, focus behavior and accessibility.
+Semantic text styles and system materials follow the selected macOS appearance.
 
-| Event | Motion | Timing |
-|---|---|---|
-| Connect | A conic sweep spins behind the glyph while three rings radiate outward, staggered by 0.18 s | 0.72 s per ring |
-| Disconnect | Glyph desaturates, the sweep stops | 0.30 s |
-| Noise control | Waves collapse inward when cancelling, drift outward otherwise; a halo blooms behind the glyph | 0.35 s |
-| Equalizer | Five bars re-shape to the new curve, left to right | 0.36 s |
-| Volume | A 240° arc fills to the new level, turning red above 85 % | 0.12 s |
-| Gesture change | The picker row cross-fades and the glyph springs | 0.24 s |
+Connecting uses the system indeterminate progress indicator. Decorative rings,
+equalizer curves and volume arcs have been removed. Device details sit behind
+a disclosure control; left and right gesture pickers have visible side labels.
+The header's options menu includes Quit BudsBar.
 
-Guidelines followed:
+The cancellation-strength selector is withheld because the current protocol
+reader does not distinguish the reported effect code from physical strength.
+Noise-mode selection still uses the verified read-back behavior.
 
-- **No animation while idle.** A looping animation in the menu bar is
-  noise. Motion is a reaction to a state change, then it settles.
-- **Indeterminate progress is a spinner, never a fake determinate bar.**
-  While connecting, the panel shows radiating rings.
-- **Volume is silent.** macOS already animates its own volume slider;
-  repeating it is a UX smell. The panel shows the value, and the arc
-  is a readout rather than a celebration.
-- **Alerts are static.** A low battery is a colour, not a motion.
+This follows Apple's guidance to adopt the system appearance through standard
+components: [Adopting Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass).
 
-## The earbud
+## Menu bar symbol
 
-The app has no artwork of its own from Apple, so the earbud in the menu bar,
-in the panel header and in the section titles is drawn here as a single
-`Path` (`Sources/BudsUI/EarbudIcon.swift`).
+The menu bar uses `MenuBarExtra("BudsBar", systemImage: "headphones")`
+so the system renders a persistent headphone symbol directly. Battery levels
+remain inside the panel. The panel uses SF Symbols for its header and
+section labels as well.
 
-The system symbol for "ear" was rejected: it says *ear*, not *earbuds*, and
-an ear next to a battery percentage looks like a mistake. The same shape is
-used in all three places, so the app speaks with one voice.
-
-The silhouette had to survive a 15-point menu bar, where a shape has to be
-recognised from its outline alone. Three versions were rendered and
-rejected before the current one:
-
-| Version | Read as |
-|---|---|
-| Round head on a thin stalk | A mushroom |
-| Wide body with a diagonal nozzle | A magnifying glass |
-| Symmetric head tapering into a stem | A light bulb |
-
-What works is the silhouette everybody knows: a head that is slightly
-taller than it is wide, and a straight stem that hangs off it at an angle.
-The state is drawn as a solid bud when noise cancelling is on and as an
-outline otherwise.
+The original earbud illustration remains available in the library, but is
+not used as the menu bar label.
 
 ## The codec line
 
@@ -116,25 +93,16 @@ codec is used, and there is no API to change it. The earbuds' own *sound
 quality* setting is a separate, writable preference, and the panel shows
 both so they are not confused.
 
-## Hand-drawn controls
+## Standard controls
 
-The segmented controls, value menus and the switch are drawn in SwiftUI
-rather than taken from AppKit. Two reasons:
+`SegmentedChoice` wraps a segmented `Picker`, `ValueMenu` wraps a menu-style
+`Picker`, and `BudsSwitch` wraps a switch-style `Toggle`. These wrappers retain
+the existing bindings while delegating drawing, keyboard navigation, selection
+and accessibility to macOS. Unknown or unread settings remain unavailable.
 
-- **Rendering.** `NSSegmentedControl`, `NSPopUpButton` and `NSSwitch` draw
-  their labels on layers that an offscreen capture does not reach, so the
-  documentation renders showed empty pills and a permanently off switch.
-  Drawing the controls in SwiftUI makes the captured image identical to
-  what the app shows.
-- **Consistency.** The panel already speaks its own visual language —
-  accent-tinted segments, rounded chips, a blooming halo. Stock chrome sat
-  awkwardly next to it.
-
-Accessibility is not lost: the hand-drawn switch exposes a native `Toggle`
-through `accessibilityRepresentation`, the segments are buttons carrying the
-selected trait, and the value menus report their current value as the
-accessibility value. The live panel's accessibility tree was checked
-against the running app.
+Offscreen captures can omit native control layers. Documentation renderer
+images are layout aids; live light and dark appearance, keyboard and VoiceOver
+checks are required before calling the UI visually verified.
 
 ## WidgetKit
 
@@ -149,8 +117,8 @@ A WidgetKit extension is deliberately **not** part of v1:
   keeps the install path to a single `cp`.
 
 If a glanceable tile is wanted later, it should be a *status card* with a
-≤2 s one-shot reaction animation, while all rich motion stays in the
-menu-bar panel.
+≤2 s one-shot reaction animation. The current panel uses system control
+transitions rather than decorative motion.
 
 ## Panel sizing
 
@@ -179,10 +147,9 @@ height the panel guessed while the content was still being laid out. The
 panel therefore resizes the window itself (`NSWindow.setFrame`) as soon as the
 measurement arrives. The measurement happens during the initial layout, so the
 user never sees the wrong size, and the panel grows and shrinks with the
-content: 619 pt with the earbuds connected and noise control off, 654 pt with
-the cancellation level shown.
+content, including when device information is expanded or an error appears.
 
-The panel is 320 pt wide, and the scroll area never grows past the height
+The panel is 360 pt wide, and the scroll area never grows past the height
 that fits on the smallest attached display together with the menu bar — past
 that point the area scrolls.
 

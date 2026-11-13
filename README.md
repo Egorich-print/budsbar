@@ -8,7 +8,8 @@ switch noise control, sound presets, and touch gestures from the menu bar.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-![The BudsBar panel, noise cancelling engaged](docs/images/panel-cancelling.png)
+The compact menu-bar panel uses native macOS pickers, switches, sliders and
+grouped controls, following the system appearance in light and dark mode.
 
 ---
 
@@ -27,10 +28,6 @@ switch noise control, sound presets, and touch gestures from the menu bar.
 Every setting is **read back from the earbuds** before it is reported as
 applied, so the panel never shows a value the device did not accept. When a
 change is refused, the panel says so instead of failing silently.
-
-| Connected | Noise cancelling |
-|---|---|
-| ![Connected](docs/images/panel-connected.png) | ![Cancelling](docs/images/panel-cancelling.png) |
 
 ### The codec line
 
@@ -167,9 +164,8 @@ BudsBar.app
 ├── BudsUI
 │   ├── ControlPanel.swift  →  panel shell and header
 │   ├── PanelContent.swift  →  the control sections
-│   ├── Controls.swift      →  hand-drawn segmented controls, menus, switch
-│   ├── EarbudIcon.swift    →  the app's own earbud, drawn as a path
-│   └── Motion.swift        →  the original motion design
+│   ├── Controls.swift      →  native pickers, switches and battery rows
+│   └── EarbudIcon.swift    →  the original earbud illustration
 └── BudsProbe               →  headless diagnostic
 ```
 

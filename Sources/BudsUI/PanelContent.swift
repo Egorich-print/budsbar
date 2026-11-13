@@ -23,16 +23,26 @@ public struct PanelContent<Model: BudsViewModel>: View {
             }
             if controller.state.isIdentified {
                 batterySection
-                noiseSection
-                soundSection
-                gestureSection
+                Group {
+                    noiseSection
+                    soundSection
+                    gestureSection
+                }
+                .disabled(!controller.linkState.isConnected)
                 deviceSection
             } else if controller.linkState.isConnected {
                 ProgressView("Reading earbud state…")
                     .controlSize(.small)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 12)
+            } else if controller.linkState == .idle {
+                Text("Connect your earbuds to see their battery and controls.")
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+        }
+        .onChange(of: controller.state.identity.modelCode) { _, _ in
+            volume.reload()
         }
     }
 
@@ -41,18 +51,18 @@ public struct PanelContent<Model: BudsViewModel>: View {
     private var batterySection: some View {
         SectionCard(title: "Battery", icon: { Image(systemName: "battery.100") }) {
             VStack(spacing: 6) {
-                BatteryPill(
-                    label: "L",
+                BatteryRow(
+                    label: "Left",
                     level: controller.state.battery.left,
                     isCharging: controller.state.isChargingLeft
                 )
-                BatteryPill(
-                    label: "R",
+                BatteryRow(
+                    label: "Right",
                     level: controller.state.battery.right,
                     isCharging: controller.state.isChargingRight
                 )
                 if let caseLevel = controller.state.battery.caseLevel {
-                    BatteryPill(label: "Case", level: caseLevel, isCharging: controller.state.isChargingCase)
+                    BatteryRow(label: "Case", level: caseLevel, isCharging: controller.state.isChargingCase)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -60,21 +70,14 @@ public struct PanelContent<Model: BudsViewModel>: View {
     }
 
     private var noiseSection: some View {
-        SectionCard(title: "Noise Control", icon: { EarbudIcon(filled: true).frame(width: 11, height: 11) }) {
+        SectionCard(title: "Noise control", icon: { Image(systemName: "waveform") }) {
             VStack(alignment: .leading, spacing: 10) {
                 SegmentedChoice(
                     options: noiseOptions,
                     selection: noiseBinding,
                     label: "Noise control"
                 )
-
-                if controller.state.noiseMode == .cancellation {
-                    SegmentedChoice(
-                        options: levelOptions,
-                        selection: levelBinding,
-                        label: "Cancellation level"
-                    )
-                }
+                .disabled(controller.state.noiseMode == nil)
             }
         }
     }
@@ -86,22 +89,27 @@ public struct PanelContent<Model: BudsViewModel>: View {
                     InfoLine(label: "Codec", value: controller.codecInfo.summary)
                 }
 
-                HStack(spacing: 8) {
-                    BandGraph(preset: controller.state.equalizerPreset)
+                LabeledContent("Equalizer") {
                     ValueMenu(
                         options: equalizerPresets.map { ChoiceOption(value: $0, title: EqualizerPreset.title(for: $0)) },
                         selection: equalizerBinding,
                         label: "Equalizer preset"
                     )
+                    .disabled(controller.state.equalizerPreset == nil)
                 }
 
-                BudsSwitch(isOn: lowLatencyBinding, label: "Low Latency Mode")
+                BudsSwitch(isOn: lowLatencyBinding, label: "Low latency")
+                    .disabled(controller.state.lowLatencyEnabled == nil)
 
+                Text("Sound preference")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
                 SegmentedChoice(
                     options: SoundQuality.allCases.map { ChoiceOption(value: $0, title: $0.title) },
                     selection: soundQualityBinding,
-                    label: "Sound quality"
+                    label: "Sound preference"
                 )
+                .disabled(controller.state.soundQuality == nil)
 
                 volumeControl
             }
@@ -111,17 +119,18 @@ public struct PanelContent<Model: BudsViewModel>: View {
     private var volumeControl: some View {
         HStack(spacing: 8) {
             Image(systemName: volume.level > 0.5 ? "speaker.wave.2.fill" : (volume.level > 0 ? "speaker.wave.1.fill" : "speaker.slash.fill"))
-                .font(.system(size: 11))
+                .font(.body)
                 .foregroundStyle(.secondary)
                 .frame(width: 14)
             Slider(value: volumeBinding, in: 0...1)
                 .controlSize(.small)
-            LevelArc(level: volume.level, progress: 1, size: 20, lineWidth: 2.5)
-            Text("\(Int(volume.level * 100))")
-                .font(.system(size: 10, weight: .medium))
+                .accessibilityLabel("Earbud volume")
+                .disabled(!volume.isAvailable)
+            Text(volume.isAvailable ? "\(Int(volume.level * 100))%" : "—")
+                .font(.caption)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
-                .frame(width: 24, alignment: .trailing)
+                .frame(width: 40, alignment: .trailing)
         }
     }
 
@@ -129,7 +138,7 @@ public struct PanelContent<Model: BudsViewModel>: View {
         SectionCard(title: "Gestures", icon: { Image(systemName: "hand.tap") }) {
             VStack(alignment: .leading, spacing: 8) {
                 GestureRow(
-                    title: "Double Tap",
+                    title: "Double tap",
                     left: controller.state.gestures.doubleTapLeft,
                     right: controller.state.gestures.doubleTapRight,
                     options: controller.state.gestures.availableTapActions,
@@ -139,7 +148,7 @@ public struct PanelContent<Model: BudsViewModel>: View {
                 }
 
                 GestureRow(
-                    title: "Triple Tap",
+                    title: "Triple tap",
                     left: controller.state.gestures.tripleTapLeft,
                     right: controller.state.gestures.tripleTapRight,
                     options: controller.state.gestures.availableTapActions,
@@ -162,12 +171,13 @@ public struct PanelContent<Model: BudsViewModel>: View {
     }
 
     private var deviceSection: some View {
-        SectionCard(title: "Device", icon: { Image(systemName: "info.circle") }) {
-            VStack(alignment: .leading, spacing: 3) {
+        DisclosureGroup("Device information") {
+            VStack(alignment: .leading, spacing: 8) {
                 InfoLine(label: "Model", value: controller.state.identity.modelCode)
                 InfoLine(label: "Firmware", value: controller.state.identity.firmware)
                 InfoLine(label: "Serial", value: controller.state.identity.serialNumber)
             }
+            .padding(.top, 8)
         }
     }
 
@@ -177,10 +187,10 @@ public struct PanelContent<Model: BudsViewModel>: View {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .foregroundStyle(.orange)
                 Text(message)
-                    .font(.system(size: 11))
+                    .font(.callout)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Button("Try Again") {
+            Button("Try again") {
                 Task { await controller.connect() }
             }
             .controlSize(.small)
@@ -201,40 +211,24 @@ public struct PanelContent<Model: BudsViewModel>: View {
         if let current = controller.state.noiseMode, !modes.contains(current) {
             modes.append(current)
         }
-        return modes.map { ChoiceOption(value: $0, title: $0.title) }
-    }
-
-    /// The cancellation levels the model offers.
-    private var levelOptions: [ChoiceOption<CancellationLevel>] {
-        var levels = controller.state.capabilities.cancellationLevels
-            .compactMap { CancellationLevel(rawValue: $0) }
-        if let current = controller.state.cancellationLevel,
-           let level = CancellationLevel(rawValue: current),
-           !levels.contains(level) {
-            levels.append(level)
+        return modes.map { mode in
+            ChoiceOption(value: mode, title: mode == .off ? "Off" : mode.title)
         }
-        return levels
-            .sorted { $0.rawValue < $1.rawValue }
-            .map { ChoiceOption(value: $0, title: $0.title) }
     }
 
     private var equalizerPresets: [Int] {
         let available = controller.state.availableEqualizerPresets
-        guard !available.isEmpty else { return [0, 2, 3, 9] }
-        return available
+        var presets = available
+        if let current = controller.state.equalizerPreset, !presets.contains(current) {
+            presets.append(current)
+        }
+        return presets
     }
 
     private var noiseBinding: Binding<NoiseMode> {
         Binding(
             get: { controller.state.noiseMode ?? .off },
             set: { mode in Task { await controller.setNoiseMode(mode, level: nil) } }
-        )
-    }
-
-    private var levelBinding: Binding<CancellationLevel> {
-        Binding(
-            get: { CancellationLevel(rawValue: controller.state.cancellationLevel ?? 0) ?? .balanced },
-            set: { level in Task { await controller.setNoiseMode(.cancellation, level: level.rawValue) } }
         )
     }
 
