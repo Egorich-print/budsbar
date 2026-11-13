@@ -18,27 +18,31 @@ public struct PanelContent<Model: BudsViewModel>: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if case .failed(let message) = controller.linkState {
-                connectionError(message)
-            }
-            if controller.state.isIdentified {
-                batterySection
-                Group {
-                    noiseSection
-                    soundSection
-                    gestureSection
+            if !controller.linkState.isConnected {
+                ContentUnavailableView {
+                    Label("No earbuds connected", systemImage: "earbuds")
+                } description: {
+                    if case .failed(let message) = controller.linkState {
+                        Text(message)
+                    } else if controller.linkState == .connecting {
+                        Text("Waiting for the connection to complete…")
+                    } else {
+                        Text("Connect your earbuds to see their battery and controls.")
+                    }
                 }
-                .disabled(!controller.linkState.isConnected)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 20)
+            } else if controller.state.isIdentified {
+                batterySection
+                noiseSection
+                soundSection
+                gestureSection
                 deviceSection
-            } else if controller.linkState.isConnected {
+            } else {
                 ProgressView("Reading earbud state…")
                     .controlSize(.small)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 12)
-            } else if controller.linkState == .idle {
-                Text("Connect your earbuds to see their battery and controls.")
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .onChange(of: controller.state.identity.modelCode) { _, _ in
@@ -179,25 +183,6 @@ public struct PanelContent<Model: BudsViewModel>: View {
             }
             .padding(.top, 8)
         }
-    }
-
-    private func connectionError(_ message: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                Text(message)
-                    .font(.callout)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Button("Try again") {
-                Task { await controller.connect() }
-            }
-            .controlSize(.small)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 8))
     }
 
     // MARK: - Bindings

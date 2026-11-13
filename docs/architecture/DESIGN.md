@@ -43,7 +43,12 @@ Semantic text styles and system materials follow the selected macOS appearance.
 Connecting uses the system indeterminate progress indicator. Decorative rings,
 equalizer curves and volume arcs have been removed. Device details sit behind
 a disclosure control; left and right gesture pickers have visible side labels.
-The header's options menu includes Quit BudsBar.
+The header's options menu includes Quit BudsBar. The TWS earbud symbol is
+larger in the header and uses the native `earbuds` symbol in the menu bar.
+
+Without an active connection, the panel shows a system empty state and a
+Connect action. Cached identity or battery data never enables device controls
+while disconnected or connecting.
 
 The cancellation-strength selector is withheld because the current protocol
 reader does not distinguish the reported effect code from physical strength.
@@ -54,8 +59,8 @@ components: [Adopting Liquid Glass](https://developer.apple.com/documentation/te
 
 ## Menu bar symbol
 
-The menu bar uses `MenuBarExtra("BudsBar", systemImage: "headphones")`
-so the system renders a persistent headphone symbol directly. Battery levels
+The menu bar uses `MenuBarExtra("BudsBar", systemImage: "earbuds")`
+so the system renders a persistent TWS-earbud symbol directly. Battery levels
 remain inside the panel. The panel uses SF Symbols for its header and
 section labels as well.
 

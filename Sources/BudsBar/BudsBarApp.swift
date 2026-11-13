@@ -11,7 +11,7 @@ struct BudsBarApp: App {
     @State private var didConnect = false
 
     var body: some Scene {
-        MenuBarExtra("BudsBar", systemImage: "headphones") {
+        MenuBarExtra("BudsBar", systemImage: "earbuds") {
             ControlPanel(controller: controller)
                 .onAppear {
                     guard !didConnect else { return }

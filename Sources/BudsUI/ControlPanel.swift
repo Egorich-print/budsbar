@@ -249,10 +249,10 @@ public struct ControlPanel<Model: BudsViewModel>: View {
     // MARK: - Header
     private var header: some View {
         HStack(spacing: 12) {
-            Image(systemName: "headphones")
-                .font(.title2)
+            Image(systemName: "earbuds")
+                .font(.title)
                 .foregroundStyle(.secondary)
-                .frame(width: 40, height: 40)
+                .frame(width: 44, height: 44)
                 .background(.quaternary, in: Circle())
                 .accessibilityHidden(true)
 
@@ -307,7 +307,7 @@ public struct ControlPanel<Model: BudsViewModel>: View {
     }
 
     private var deviceTitle: String {
-        controller.state.identity.displayName
+        controller.linkState.isConnected ? controller.state.identity.displayName : "BudsBar"
     }
 
     private var statusSubtitle: String {
